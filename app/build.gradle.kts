@@ -23,12 +23,12 @@ ksp {
 
 android {
     namespace = "com.masum.cipher"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.masum.cipher"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 53
         versionName = "6.3.0"
         androidResources {
