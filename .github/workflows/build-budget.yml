@@ -44,7 +44,12 @@ jobs:
           SDKMGR=$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/sdkmanager' | head -n 1)
           test -n "$SDKMGR"
           yes | "$SDKMGR" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
-          "$SDKMGR" --sdk_root="$SDK_ROOT" 'platforms;android-36' 'build-tools;36.0.0'
+          "$SDKMGR" --sdk_root="$SDK_ROOT" --list --channel=3 > /tmp/sdk-packages.txt
+          grep -E 'platforms;android-37([.]([0-9]+))?' /tmp/sdk-packages.txt | head -n 8
+          PLATFORM=$(grep -Eo 'platforms;android-37([.][0-9]+)?' /tmp/sdk-packages.txt | sort -V | tail -n 1)
+          test -n "$PLATFORM"
+          echo "Installing Android platform: $PLATFORM"
+          "$SDKMGR" --sdk_root="$SDK_ROOT" --channel=3 "$PLATFORM" 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
       - name: Test Revolut parser
         run: |
