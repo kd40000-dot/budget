@@ -83,8 +83,13 @@ class TransactionNotificationService : NotificationListenerService() {
         val currencyCode = cachedCurrencyCode
         val postedAtMillis = sbn.postTime
         serviceScope.launch {
-            val parsedTx = transactionParser.parse(fullMessage, currencyCode)
-            if (parsedTx != null) {
+            val revolutPayment = if (packageName == "com.revolut.revolut") {
+                RevolutNotificationParser.parse(title, text, bigText)
+            } else null
+            val parsedTx = if (revolutPayment != null) null
+                else if (packageName == "com.revolut.revolut") null
+                else transactionParser.parse(fullMessage, currencyCode)
+            if (revolutPayment != null || parsedTx != null) {
                 val appLabel = try {
                     val pm = packageManager
                     val appInfo = pm.getApplicationInfo(packageName, 0)
@@ -100,11 +105,11 @@ class TransactionNotificationService : NotificationListenerService() {
                 }
 
                 val transactionEntity = TransactionEntity(
-                    merchant = parsedTx.merchant,
-                    amount = parsedTx.amount,
-                    currency = parsedTx.currency,
+                    merchant = revolutPayment?.merchant ?: requireNotNull(parsedTx).merchant,
+                    amount = revolutPayment?.amount ?: requireNotNull(parsedTx).amount,
+                    currency = revolutPayment?.currency ?: requireNotNull(parsedTx).currency,
                     category = "",
-                    isIncome = parsedTx.isIncome,
+                    isIncome = revolutPayment?.isIncome ?: requireNotNull(parsedTx).isIncome,
                     rawSms = storedMessage,
                     timestamp = resolveTransactionTimestamp(postedAtMillis, System.currentTimeMillis())
                 )
