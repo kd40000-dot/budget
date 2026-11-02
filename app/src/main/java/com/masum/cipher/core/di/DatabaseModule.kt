@@ -1,0 +1,148 @@
+package com.masum.cipher.core.di
+
+import android.content.Context
+import androidx.room.Room
+import com.masum.cipher.core.data.local.AppDatabase
+import com.masum.cipher.core.data.local.LazyPassphraseOpenHelperFactory
+import com.masum.cipher.core.data.local.dao.CategoryRuleDao
+import com.masum.cipher.core.data.local.dao.MerchantAliasDao
+import com.masum.cipher.core.data.local.dao.TransactionDao
+import com.masum.cipher.core.data.repository.BackupRepository
+import com.masum.cipher.core.security.SecurityManager
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DatabaseModule {
+
+    @Provides
+    @Singleton
+    fun provideAppDatabase(
+        @ApplicationContext context: Context,
+        securityManager: SecurityManager
+    ): AppDatabase {
+        val factory = LazyPassphraseOpenHelperFactory { securityManager.getDatabasePassphrase() }
+
+        return Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            AppDatabase.DATABASE_NAME
+        )
+            .openHelperFactory(factory)
+            .addMigrations(
+                AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5,
+                AppDatabase.MIGRATION_5_6,
+                AppDatabase.MIGRATION_6_7,
+                AppDatabase.MIGRATION_7_8,
+                AppDatabase.MIGRATION_8_9,
+                AppDatabase.MIGRATION_9_10,
+                AppDatabase.MIGRATION_10_11,
+                AppDatabase.MIGRATION_11_12,
+                AppDatabase.MIGRATION_12_13,
+                AppDatabase.MIGRATION_13_14
+            )
+            .build()
+    }
+
+    @Provides
+    fun provideTransactionDao(database: AppDatabase): TransactionDao {
+        return database.transactionDao()
+    }
+
+    @Provides
+    fun provideTransactionSplitDao(database: AppDatabase): com.masum.cipher.core.data.local.dao.TransactionSplitDao {
+        return database.transactionSplitDao()
+    }
+
+    @Provides
+    fun provideMerchantAliasDao(database: AppDatabase): MerchantAliasDao {
+        return database.merchantAliasDao()
+    }
+
+    @Provides
+    fun provideCategoryRuleDao(database: AppDatabase): CategoryRuleDao {
+        return database.categoryRuleDao()
+    }
+    
+    @Provides
+    fun provideSubscriptionDao(database: AppDatabase): com.masum.cipher.core.data.local.dao.SubscriptionDao {
+        return database.subscriptionDao()
+    }
+
+    @Provides
+    fun provideCustomCategoryDao(database: AppDatabase): com.masum.cipher.core.data.local.dao.CustomCategoryDao {
+        return database.customCategoryDao()
+    }
+
+    @Provides
+    fun provideAccountDao(database: AppDatabase): com.masum.cipher.core.data.local.dao.AccountDao {
+        return database.accountDao()
+    }
+
+    @Provides
+    fun provideGoalDao(database: AppDatabase): com.masum.cipher.core.data.local.dao.GoalDao {
+        return database.goalDao()
+    }
+
+    @Provides
+    fun provideDebtDao(database: AppDatabase): com.masum.cipher.core.data.local.dao.DebtDao {
+        return database.debtDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAccountRepository(
+        accountDao: com.masum.cipher.core.data.local.dao.AccountDao,
+        transactionDao: TransactionDao
+    ): com.masum.cipher.core.data.repository.AccountRepository {
+        return com.masum.cipher.core.data.repository.AccountRepository(accountDao, transactionDao)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideBackupRepository(
+        @ApplicationContext context: Context,
+        appDatabase: AppDatabase,
+        transactionDao: TransactionDao,
+        transactionSplitDao: com.masum.cipher.core.data.local.dao.TransactionSplitDao,
+        merchantAliasDao: MerchantAliasDao,
+        categoryRuleDao: CategoryRuleDao,
+        subscriptionDao: com.masum.cipher.core.data.local.dao.SubscriptionDao,
+        customCategoryDao: com.masum.cipher.core.data.local.dao.CustomCategoryDao,
+        accountDao: com.masum.cipher.core.data.local.dao.AccountDao,
+        goalDao: com.masum.cipher.core.data.local.dao.GoalDao,
+        debtDao: com.masum.cipher.core.data.local.dao.DebtDao,
+        userPreferences: com.masum.cipher.core.data.local.pref.UserPreferences,
+        backupCrypto: com.masum.cipher.core.security.BackupCrypto
+    ): BackupRepository {
+        return BackupRepository(
+            context = context,
+            appDatabase = appDatabase,
+            transactionDao = transactionDao,
+            transactionSplitDao = transactionSplitDao,
+            merchantAliasDao = merchantAliasDao,
+            categoryRuleDao = categoryRuleDao,
+            subscriptionDao = subscriptionDao,
+            customCategoryDao = customCategoryDao,
+            accountDao = accountDao,
+            goalDao = goalDao,
+            debtDao = debtDao,
+            userPreferences = userPreferences,
+            backupCrypto = backupCrypto
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideMessageIntentClassifier(
+        impl: com.masum.cipher.core.ml.OnDeviceIntentClassifier
+    ): com.masum.cipher.core.ml.MessageIntentClassifier {
+        return impl
+    }
+}

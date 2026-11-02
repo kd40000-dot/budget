@@ -1,0 +1,1027 @@
+package com.masum.cipher.ui.categories
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.res.stringResource
+import com.masum.cipher.R
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.masum.cipher.core.data.local.entity.CustomCategoryEntity
+import com.masum.cipher.core.data.local.entity.TransactionEntity
+import com.masum.cipher.core.data.local.pref.UserPreferences
+import com.masum.cipher.core.domain.model.CategoryHelper
+import com.masum.cipher.core.domain.model.CategoryItem
+import com.masum.cipher.core.util.AppFormatters
+import com.masum.cipher.core.util.performVibrate
+import com.masum.cipher.ui.components.CategoryDetailSheet
+import com.masum.cipher.ui.components.CreateCustomCategorySheet
+import com.masum.cipher.ui.components.EditCategoryBudgetDialog
+import com.masum.cipher.ui.components.TimeSelectorDropdown
+import com.masum.cipher.ui.components.TransactionDetailsSheet
+import com.masum.cipher.ui.components.VaultCard
+import com.masum.cipher.ui.dashboard.DashboardContract
+import com.masum.cipher.ui.insights.InsightsContract
+import com.masum.cipher.ui.insights.InsightsViewModel
+import com.masum.cipher.ui.theme.EmeraldIncome
+import com.masum.cipher.ui.theme.Lato
+import com.masum.cipher.ui.theme.RoseExpense
+import com.masum.cipher.ui.theme.Typography
+import compose.icons.LucideIcons
+import compose.icons.lucideicons.ArrowLeft
+import compose.icons.lucideicons.ChevronDown
+import compose.icons.lucideicons.ChevronRight
+import compose.icons.lucideicons.Pencil
+import compose.icons.lucideicons.Plus
+import com.masum.cipher.ui.components.ProFeatureGateSheet
+import com.masum.cipher.ui.components.ProFeaturePerk
+import compose.icons.lucideicons.Sparkles
+import java.util.Calendar
+import java.util.Locale
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoriesScreen(
+    viewModel: InsightsViewModel,
+    userPreferences: UserPreferences,
+    onNavigateBack: () -> Unit,
+    onNavigateToPro: () -> Unit = {}
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val settings by userPreferences.settingsFlow.collectAsStateWithLifecycle(initialValue = null)
+    val view = LocalView.current
+    val isHapticsEnabled = settings?.isHapticsEnabled ?: true
+    val isPro = settings?.isPro == true
+
+    var expandedCategory by remember { mutableStateOf<String?>(null) }
+    var showBudgetDialogFor by remember { mutableStateOf<CategoryItem?>(null) }
+    var selectedCategoryForDetail by remember { mutableStateOf<DashboardContract.CategoryData?>(null) }
+    var editingTransaction by remember { mutableStateOf<TransactionEntity?>(null) }
+    var showCreateCategorySheet by remember { mutableStateOf(false) }
+    var showProGateSheet by remember { mutableStateOf(false) }
+    var editingCustomCategory by remember { mutableStateOf<CustomCategoryEntity?>(null) }
+
+    val categoryBudgets = settings?.categoryBudgets ?: emptyMap()
+
+    val filteredTransactions = remember(state.allTransactions, state.selectedTimeRange) {
+        state.allTransactions.filter { tx ->
+            tx.timestamp in state.selectedTimeRange.startTime..state.selectedTimeRange.endTime
+        }
+    }
+
+    val totalExpense = remember(filteredTransactions) {
+        filteredTransactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }.sumOf { it.amount }
+    }
+
+    val allCategoryItems = remember(filteredTransactions, totalExpense, state.customCategories) {
+        val expenses = filteredTransactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }
+        val categoryTxMap = expenses.groupBy { tx ->
+            CategoryHelper.resolveCategory(tx.category, state.customCategories).name
+        }
+
+        val allCategories = CategoryHelper.getAllCategories(state.customCategories, includeIncome = false)
+        allCategories.map { cat ->
+            val txList = categoryTxMap[cat.name] ?: emptyList()
+            val spent = txList.sumOf { it.amount }
+            val percentage = if (totalExpense > 0) (spent / totalExpense).toFloat() else 0f
+            DashboardContract.CategoryData(
+                category = cat.name,
+                amount = spent,
+                percentage = percentage,
+                color = cat.colorHex
+            )
+        }.sortedWith(
+            compareByDescending<DashboardContract.CategoryData> { it.amount > 0 }
+                .thenByDescending { it.amount }
+        )
+    }
+
+    val activeCount = allCategoryItems.count { it.amount > 0 }
+    val budgetedCount = categoryBudgets.count { it.value > 0 }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.nav_categories),
+                        style = Typography.titleMedium.copy(
+                            fontFamily = Lato,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        view.performVibrate(isHapticsEnabled, isLongPress = false)
+                        onNavigateBack()
+                    }) {
+                        Icon(
+                            imageVector = LucideIcons.ArrowLeft,
+                            contentDescription = stringResource(R.string.action_close),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                actions = {
+                    TimeSelectorDropdown(
+                        selectedPeriod = state.selectedTimePeriod,
+                        selectedTimeRange = state.selectedTimeRange,
+                        onPeriodSelected = { period, start, end ->
+                            viewModel.handleIntent(InsightsContract.Intent.SetTimePeriod(period, start, end))
+                        },
+                        isHapticsEnabled = isHapticsEnabled,
+                        iconOnly = true,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                VaultCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    contentPadding = 18.dp
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f, fill = false)) {
+                                Text(
+                                    text = stringResource(R.string.dashboard_total_spent).uppercase(),
+                                    style = Typography.labelSmall.copy(
+                                        fontFamily = Lato,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        letterSpacing = 1.2.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = AppFormatters.formatCompactCurrency(totalExpense, currencySymbol = state.currencySymbol),
+                                    style = Typography.headlineLarge.copy(
+                                        fontFamily = Lato,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 28.sp,
+                                        letterSpacing = (-0.8).sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.End) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "$activeCount ${stringResource(R.string.active_suffix)}",
+                                        style = Typography.labelSmall.copy(
+                                            fontFamily = Lato,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        ),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                if (budgetedCount > 0) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "$budgetedCount budgeted",
+                                        style = Typography.bodySmall.copy(
+                                            fontFamily = Lato,
+                                            fontSize = 11.sp
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+            }
+
+            if (!isPro) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), RoundedCornerShape(16.dp))
+                            .clickable {
+                                view.performVibrate(isHapticsEnabled)
+                                showProGateSheet = true
+                            }
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = LucideIcons.Sparkles,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.categories_free_banner_title),
+                                    style = Typography.labelMedium.copy(
+                                        fontFamily = Lato,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.5.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(R.string.categories_free_banner_desc),
+                                    style = Typography.bodySmall.copy(
+                                        fontFamily = Lato,
+                                        fontSize = 11.sp,
+                                        lineHeight = 14.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clickable {
+                            view.performVibrate(isHapticsEnabled, isLongPress = false)
+                            if (!isPro && state.customCategories.size >= 5) {
+                                showProGateSheet = true
+                            } else {
+                                editingCustomCategory = null
+                                showCreateCategorySheet = true
+                            }
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = LucideIcons.Plus,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = stringResource(R.string.custom_category_new_title),
+                                style = Typography.titleMedium.copy(
+                                    fontFamily = Lato,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.5.sp
+                                ),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = stringResource(R.string.custom_category_subtitle),
+                                style = Typography.bodySmall.copy(
+                                    fontFamily = Lato,
+                                    fontSize = 11.5.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Icon(
+                        imageVector = LucideIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            items(
+                items = allCategoryItems,
+                key = { it.category }
+            ) { categoryData ->
+                val categoryItem = remember(categoryData.category, state.customCategories) {
+                    CategoryHelper.resolveCategory(categoryData.category, state.customCategories)
+                }
+                val categoryColor = categoryItem.color
+                val budget = categoryBudgets[categoryItem.displayName] ?: categoryBudgets[categoryItem.name] ?: 0.0
+                val spent = categoryData.amount
+                val hasBudget = budget > 0
+                val isOverBudget = hasBudget && spent > budget
+                val percentUsed = if (hasBudget) ((spent / budget) * 100).toInt() else 0
+                val isExpanded = expandedCategory == categoryData.category
+
+                val chevronRotation by animateFloatAsState(
+                    targetValue = if (isExpanded) 180f else 0f,
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    label = "chevron_${categoryData.category}"
+                )
+
+                val progress = if (hasBudget) (spent / budget).toFloat().coerceIn(0f, 1f) else 0f
+                val animatedProgress by animateFloatAsState(
+                    targetValue = progress,
+                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                    label = "catProg_${categoryData.category}"
+                )
+
+                val now = Calendar.getInstance()
+                val daysInMonth = now.getActualMaximum(Calendar.DAY_OF_MONTH)
+                val currentDay = now.get(Calendar.DAY_OF_MONTH)
+                val daysRemaining = (daysInMonth - currentDay + 1).coerceAtLeast(1)
+                val remainingBudget = budget - spent
+                val safeDaily = if (remainingBudget > 0) remainingBudget / daysRemaining else 0.0
+
+                VaultCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        view.performVibrate(isHapticsEnabled, isLongPress = false)
+                        expandedCategory = if (isExpanded) null else categoryData.category
+                    },
+                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentPadding = 14.dp
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(categoryColor.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = categoryItem.icon,
+                                        contentDescription = null,
+                                        tint = categoryColor,
+                                        modifier = Modifier.size(19.dp)
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = if (categoryItem.titleRes != null) stringResource(categoryItem.titleRes) else categoryItem.displayName,
+                                            style = Typography.titleMedium.copy(
+                                                fontFamily = Lato,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.5.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (categoryItem.isCustom) {
+                                            val customIndex = state.customCategories.indexOfFirst { it.name.equals(categoryItem.name, ignoreCase = true) }
+                                            val isCustomPaused = !isPro && customIndex >= 5
+                                            val customEntity = state.customCategories.find { it.name.equals(categoryItem.name, ignoreCase = true) }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(categoryColor.copy(alpha = 0.15f))
+                                                    .clickable {
+                                                        view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                                        if (isCustomPaused) {
+                                                            showProGateSheet = true
+                                                        } else if (customEntity != null) {
+                                                            editingCustomCategory = customEntity
+                                                            showCreateCategorySheet = true
+                                                        }
+                                                    }
+                                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(R.string.custom_category_badge),
+                                                        style = Typography.labelSmall.copy(
+                                                            fontFamily = Lato,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 9.sp
+                                                        ),
+                                                        color = categoryColor
+                                                    )
+                                                    Icon(
+                                                        imageVector = LucideIcons.Pencil,
+                                                        contentDescription = null,
+                                                        tint = categoryColor,
+                                                        modifier = Modifier.size(9.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            if (isCustomPaused) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Color(0xFF64748B).copy(alpha = 0.2f))
+                                                        .border(0.6.dp, Color(0xFF94A3B8).copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(R.string.rule_paused_badge),
+                                                        style = Typography.labelSmall.copy(
+                                                            fontFamily = Lato,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 8.5.sp,
+                                                            letterSpacing = 0.6.sp
+                                                        ),
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Text(
+                                        text = if (totalExpense > 0 && spent > 0) {
+                                            "${String.format(Locale.getDefault(), "%.1f", categoryData.percentage * 100)}% of total"
+                                        } else {
+                                            stringResource(R.string.no_spend_this_period)
+                                        },
+                                        style = Typography.bodySmall.copy(
+                                            fontFamily = Lato,
+                                            fontSize = 11.sp
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
+                                Text(
+                                    text = AppFormatters.formatCompactCurrency(spent, currencySymbol = state.currencySymbol),
+                                    style = Typography.titleLarge.copy(
+                                        fontFamily = Lato,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    ),
+                                    color = if (isOverBudget) RoseExpense else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+
+                                Icon(
+                                    imageVector = LucideIcons.ChevronDown,
+                                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .rotate(chevronRotation)
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = isExpanded,
+                            enter = expandVertically(tween(300, easing = FastOutSlowInEasing)) + fadeIn(tween(250)),
+                            exit = shrinkVertically(tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(200))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                if (hasBudget) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(if (isOverBudget) RoseExpense else if (percentUsed >= 85) Color(0xFFF59E0B) else EmeraldIncome)
+                                            )
+                                            Text(
+                                                text = if (isOverBudget) "OVER LIMIT" else "$percentUsed% OF LIMIT USED",
+                                                style = Typography.labelSmall.copy(
+                                                    fontFamily = Lato,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 10.sp,
+                                                    letterSpacing = 0.8.sp
+                                                ),
+                                                color = if (isOverBudget) RoseExpense else if (percentUsed >= 85) Color(0xFFF59E0B) else EmeraldIncome
+                                            )
+                                        }
+
+                                        val currencySymbol = settings?.currencySymbol ?: state.currencySymbol
+                                        val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+                                        Text(
+                                            text = "${stringResource(R.string.limit_suffix)}: ${AppFormatters.formatCurrency(budget, currencySymbol, locale)}",
+                                            style = Typography.labelSmall.copy(
+                                                fontFamily = Lato,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 11.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(5.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(animatedProgress)
+                                                .fillMaxHeight()
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(if (isOverBudget) RoseExpense else categoryColor)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        val currencySymbol = settings?.currencySymbol ?: state.currencySymbol
+                                        val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+                                        Text(
+                                            text = if (isOverBudget) {
+                                                "Exceeded by ${AppFormatters.formatCurrency(spent - budget, currencySymbol, locale)}"
+                                            } else {
+                                                "${AppFormatters.formatCurrency(remainingBudget, currencySymbol, locale)} left"
+                                            },
+                                            style = Typography.labelSmall.copy(
+                                                fontFamily = Lato,
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Medium
+                                            ),
+                                            color = if (isOverBudget) RoseExpense else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        if (!isOverBudget) {
+                                            Text(
+                                                text = "${stringResource(R.string.safe_daily_spend)}: ${AppFormatters.formatCurrency(safeDaily, currencySymbol, locale)}/${stringResource(R.string.day_unit)}",
+                                                style = Typography.labelSmall.copy(
+                                                    fontFamily = Lato,
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.no_limit_set),
+                                            style = Typography.bodySmall.copy(
+                                                fontFamily = Lato,
+                                                fontSize = 11.5.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.set_limit),
+                                            style = Typography.labelSmall.copy(
+                                                fontFamily = Lato,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp
+                                            ),
+                                            color = categoryColor,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(categoryColor.copy(alpha = 0.12f))
+                                                .clickable {
+                                                    view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                                    showBudgetDialogFor = categoryItem
+                                                }
+                                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
+                                            .clickable {
+                                                view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                                selectedCategoryForDetail = categoryData
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.view_breakdown_transactions),
+                                            style = Typography.labelMedium.copy(
+                                                fontFamily = Lato,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 12.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Icon(
+                                            imageVector = LucideIcons.ChevronRight,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+
+                                    if (categoryItem.isCustom) {
+                                        val customIndex = state.customCategories.indexOfFirst { it.name.equals(categoryItem.name, ignoreCase = true) }
+                                        val isCustomPaused = !isPro && customIndex >= 5
+                                        val customEntity = state.customCategories.find { it.name.equals(categoryItem.name, ignoreCase = true) }
+                                        if (customEntity != null) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
+                                                    .clickable {
+                                                        view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                                        if (isCustomPaused) {
+                                                            showProGateSheet = true
+                                                        } else {
+                                                            editingCustomCategory = customEntity
+                                                            showCreateCategorySheet = true
+                                                        }
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = LucideIcons.Pencil,
+                                                    contentDescription = stringResource(R.string.custom_category_edit_title),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    showBudgetDialogFor?.let { cat ->
+        val catDisplayName = if (cat.titleRes != null) stringResource(cat.titleRes) else cat.displayName
+        EditCategoryBudgetDialog(
+            categoryName = catDisplayName,
+            currentBudget = categoryBudgets[cat.displayName] ?: categoryBudgets[cat.name] ?: 0.0,
+            currencySymbol = settings?.currencySymbol ?: state.currencySymbol,
+            onDismiss = { showBudgetDialogFor = null },
+            onConfirm = { newLimit ->
+                viewModel.handleIntent(InsightsContract.Intent.SetCategoryBudget(cat.displayName, newLimit))
+                showBudgetDialogFor = null
+            },
+            isHapticsEnabled = isHapticsEnabled
+        )
+    }
+
+    selectedCategoryForDetail?.let { catData ->
+        val catItem = CategoryHelper.resolveCategory(catData.category, state.customCategories)
+        CategoryDetailSheet(
+            categoryData = catData,
+            categoryBudget = categoryBudgets[catItem.displayName] ?: categoryBudgets[catItem.name] ?: 0.0,
+            transactions = filteredTransactions,
+            customCategories = state.customCategories,
+            currencySymbol = settings?.currencySymbol ?: state.currencySymbol,
+            onSetCategoryBudget = { newLimit ->
+                viewModel.handleIntent(InsightsContract.Intent.SetCategoryBudget(catItem.displayName, newLimit))
+            },
+            onDismiss = { selectedCategoryForDetail = null },
+            onTransactionClick = { tx ->
+                editingTransaction = tx
+                selectedCategoryForDetail = null
+            },
+            isHapticsEnabled = isHapticsEnabled
+        )
+    }
+
+    editingTransaction?.let { tx ->
+        TransactionDetailsSheet(
+            transaction = tx,
+            accounts = state.accounts,
+            customCategories = state.customCategories,
+            currencySymbol = settings?.currencySymbol ?: state.currencySymbol,
+            onDismiss = { editingTransaction = null },
+            onConfirm = { updated ->
+                view.performVibrate(isHapticsEnabled, isLongPress = true)
+                viewModel.handleIntent(InsightsContract.Intent.UpdateTransaction(updated))
+                editingTransaction = null
+            },
+            onSaveSplits = { splits ->
+                viewModel.handleIntent(InsightsContract.Intent.SaveTransactionSplits(tx.id, splits))
+            },
+            onDelete = {
+                viewModel.handleIntent(InsightsContract.Intent.DeleteTransaction(tx))
+                editingTransaction = null
+            },
+            onCreateCustomCategory = { name, iconName, colorHex ->
+                viewModel.handleIntent(InsightsContract.Intent.CreateCustomCategory(name, iconName, colorHex))
+            },
+            isHapticsEnabled = isHapticsEnabled
+        )
+    }
+
+    state.promptMerchantRuleFor?.let { prompt ->
+        AlertDialog(
+            onDismissRequest = { viewModel.handleIntent(InsightsContract.Intent.DismissMerchantRulePrompt) },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.smart_rules_merchant_dialog_title),
+                    style = com.masum.cipher.ui.theme.Typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.smart_rules_merchant_dialog_message, prompt.rawMerchant, prompt.newMerchant),
+                    style = com.masum.cipher.ui.theme.Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.handleIntent(InsightsContract.Intent.SaveMerchantRule(prompt.rawMerchant, prompt.newMerchant))
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(stringResource(R.string.smart_rules_dialog_confirm), color = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.handleIntent(InsightsContract.Intent.DismissMerchantRulePrompt)
+                }) {
+                    Text(stringResource(R.string.smart_rules_dialog_dismiss), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    state.promptCategoryRuleFor?.let { tx ->
+        AlertDialog(
+            onDismissRequest = { viewModel.handleIntent(InsightsContract.Intent.DismissCategoryRulePrompt) },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.smart_rules_category_dialog_title),
+                    style = com.masum.cipher.ui.theme.Typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                val catItem = CategoryHelper.resolveCategory(tx.category, state.customCategories)
+                val categoryDisplayName = if (catItem.titleRes != null) stringResource(catItem.titleRes) else catItem.displayName
+                Text(
+                    text = stringResource(R.string.smart_rules_category_dialog_message, tx.merchant, categoryDisplayName),
+                    style = com.masum.cipher.ui.theme.Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.handleIntent(InsightsContract.Intent.SaveCategoryRule(tx.merchant, tx.category))
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(stringResource(R.string.smart_rules_dialog_confirm), color = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.handleIntent(InsightsContract.Intent.DismissCategoryRulePrompt)
+                }) {
+                    Text(stringResource(R.string.smart_rules_dialog_dismiss), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    if (showCreateCategorySheet) {
+        CreateCustomCategorySheet(
+            existingCategory = editingCustomCategory,
+            existingCustomCategories = state.customCategories,
+            isHapticsEnabled = isHapticsEnabled,
+            onDismiss = {
+                showCreateCategorySheet = false
+                editingCustomCategory = null
+            },
+            onSaveCategory = { name, iconName, colorHex ->
+                val existing = editingCustomCategory
+                if (existing != null) {
+                    viewModel.handleIntent(
+                        InsightsContract.Intent.UpdateCustomCategory(
+                            id = existing.id,
+                            oldName = existing.name,
+                            newName = name,
+                            iconName = iconName,
+                            colorHex = colorHex
+                        )
+                    )
+                } else {
+                    viewModel.handleIntent(
+                        InsightsContract.Intent.CreateCustomCategory(
+                            name = name,
+                            iconName = iconName,
+                            colorHex = colorHex
+                        )
+                    )
+                }
+                showCreateCategorySheet = false
+                editingCustomCategory = null
+            },
+            onDeleteCategory = { entity ->
+                viewModel.handleIntent(InsightsContract.Intent.DeleteCustomCategory(entity))
+                showCreateCategorySheet = false
+                editingCustomCategory = null
+            }
+        )
+    }
+
+    if (showProGateSheet) {
+        ProFeatureGateSheet(
+            featureTitle = stringResource(R.string.pro_gate_custom_categories_title),
+            featureTagline = stringResource(R.string.pro_gate_custom_categories_desc),
+            featureIcon = LucideIcons.Sparkles,
+            perks = listOf(
+                ProFeaturePerk(stringResource(R.string.custom_category_badge), stringResource(R.string.settings_pro_unlocked_desc)),
+                ProFeaturePerk(stringResource(R.string.smart_rules_title), stringResource(R.string.pro_perk_smart_rules_desc)),
+                ProFeaturePerk(stringResource(R.string.pro_perk_unlimited_accounts_title), stringResource(R.string.pro_perk_unlimited_accounts_desc))
+            ),
+            isHapticsEnabled = isHapticsEnabled,
+            primaryButtonText = stringResource(R.string.pro_btn_upgrade),
+            onNavigateToPro = {
+                showProGateSheet = false
+                onNavigateToPro()
+            },
+            onDismiss = {
+                showProGateSheet = false
+            }
+        )
+    }
+}

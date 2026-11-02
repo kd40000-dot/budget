@@ -1,0 +1,484 @@
+# Release Notes
+
+## [6.3.0]
+
+### Added & Improved
+- **App Opening Animation & Vibration**: Added an opening animation with dark mode support and a quick vibration as your dashboard opens.
+- **In-App Updates**: Download and install updates directly from Settings without needing a browser.
+- **Backup Restore Options**: Choose whether to merge backup data into your existing records or replace everything completely.
+- **Faster Date Filters & Smaller App**: Faster date filtering in transactions and analytics, and a smaller app download size.
+
+---
+
+## [6.2.8]
+
+### Added & Improved
+- **Modern Bento Sheet Design**: Completely refreshed transaction details, split expenses, category breakdowns, savings pots, and debt tracking with responsive bento cards, real-time calculations, and fluid animations.
+- **Category Icon Expansion**: Added 67 new Lucide icons covering travel, lifestyle, utilities, shopping, and everyday finances, paired with a fast search bar for quick discovery.
+- **Manage Subscriptions Direct Link**: Pro members can now open and manage their active recurring subscriptions directly from the membership screen in one tap.
+- **Scroll & Sheet Polish**: Prevented accidental bottom sheet dismissals when scrolling through transactions, removed system keyboard popups during read-only browsing, and tightened dashboard search proportions.
+- **Under-the-Hood Cleanup**: Removed unused legacy assets, streamlined internal imports, resolved deprecations, and patched dependencies for a lighter, faster app.
+
+---
+
+## [6.2.6]
+
+### Added & Improved
+- **Terms of Service**: Added an in-app Terms of Service screen alongside the Privacy Policy with clean section navigation.
+- **Layout & Display Fixes**: Fixed text wrapping, padding, and layout clipping across Onboarding, Debts, Savings Goals, and Split Expenses on compact displays and larger system font sizes.
+- **Stability & Performance**: Improved background sync reliability and general application performance.
+
+---
+
+## [6.2.5]
+
+### Added & Improved
+- **Refined Typography & Smaller App Size**: Upgraded typography across the entire app to General Sans (by Indian Type Foundry), delivering a natively proportioned Rupee symbol (`₹`) and razor-sharp financial figures while trimming over 540 KB from the app bundle.
+- **Smarter Expense Detection**: Automatically filters out promotional SMS, loan offers, and marketing noise so only your real spending is captured.
+- **Smoother Screen Transitions**: Refined screen animations when browsing and navigating back for a faster, responsive feel.
+- **Core Optimization**: Streamlined dependencies and updated AndroidX, Room, and Compose libraries to the latest stable releases.
+
+---
+
+## [6.2.0]
+
+### Added & Improved
+- **Debts & Loans**: Keep track of money you've lent to friends or borrowed from others. Record partial or full repayments, track settled balances, and link them to your accounts so balances stay automatically synchronized.
+- **Account-Specific Budgets**: Set dedicated monthly spending limits for individual accounts and wallets alongside your overall budget.
+- **Interactive Home Screen Widgets**: Switch between accounts right from your home widgets with the new account picker without opening the app.
+
+---
+
+## [6.1.6]
+
+### Added & Improved
+- **Manage Your Subscription**: Subscribers can now manage or cancel their plan right from the Membership screen in one tap.
+- **Smoother License Activation**: Pro re-activates on a new phone after you restore a backup, and the renewal date of your plan is shown correctly.
+
+### Fixed
+- The license key box on the welcome screen now shows the standard hint text.
+
+---
+
+## [6.1.5]
+
+### Added & Improved
+- **Restore on a New Phone**: Moving phones? Tap *Restore from a backup* right on the first screen to bring back your accounts, budgets and history in one step, then grant SMS and notification access to resume automatic tracking.
+- **See Your Backup Password**: View the saved auto-backup password anytime in Settings > Data & backup after confirming with your fingerprint or PIN. Cipher now also reminds you to write the password down when you set it.
+- **A Clearer Welcome Screen**: Bigger, easier-to-find Restore backup and License key buttons, larger text, and a layout that fits small phones and large font sizes.
+- **Faster Accounts**: Account balances are now calculated by the database, so the main screen, insights and accounts stay quick even with years of history.
+
+### Fixed
+- **Safer Transfers**: Moving money between your accounts is now saved all-or-nothing, so a transfer can never end up half done.
+- **Correct Dates for Delayed Messages**: Bank SMS and payment notifications that arrive late are recorded with the time they were actually sent.
+- **No-Spend Streak**: The streak now counts from your last real expense instead of showing a full year at the start of a month.
+- **Merchants Combined**: Merchants that differ only by capital letters, like JIO and Jio, are now grouped together in top merchants.
+- **Readable Calendar**: Day numbers in the activity calendar are easy to read on dark themes, and screen readers now describe each day with its date and spending.
+- **Correct Plurals**: "1 day" and "1 day left" instead of "1 days" in every language.
+
+### Security & Reliability
+- If Cipher cannot unlock its secure storage, for example after a phone transfer, it now explains what happened and offers recovery instead of crashing, and it never replaces your key silently.
+- App data is excluded from phone-to-phone transfer, because the encryption key cannot move between devices. Use a backup file to move your data.
+- Removed license and diagnostic details from the device log.
+
+---
+
+## [6.1.2]
+
+### Improved & Polished
+- **Better Battery Life**: Optimized background notification processing so Cipher consumes significantly less battery throughout the day.
+- **Faster Loading**: Instant loading for your dashboard summary and account histories, even with thousands of transactions.
+- **Update Notifications**: Get notified right away when a new update is ready on Google Play so you never miss important features or fixes (configurable in Settings > Notifications).
+- **Smoother Scrolling**: Enhanced UI rendering and general stability improvements across all screens.
+
+---
+
+## [6.1.1]
+
+### Fixed & Improved
+- **Custom Category Confirmation Button**: Added a dedicated save and confirmation button when creating and editing custom categories, ensuring action buttons are always clearly visible above navigation bars.
+- **Quick Edit & Delete Categories**: Easily manage custom categories without digging into Settings. Long-press any custom category directly in the category selector sheet, or tap the custom category badge in Categories to edit or delete it immediately.
+- **Dialog & Layout Stability**: Refined popup presentation and system inset handling across all screen sizes and navigation modes to prevent visual overlap or flickering.
+
+---
+
+## [6.1.0]
+
+### Added & Improved
+- **Smart Budgeting for Transfers**: Money transferred between your own accounts (bank accounts, credit cards, or cash) is now excluded from income and expenses so your monthly budget reflects real spending accurately.
+- **Clear Transfer Destinations**: Transaction histories now clearly display the exact source and destination account names for every transfer (e.g., *Transfer to Savings*, *Transfer from Checking*).
+- **Expanded Account Colors & Icons**: Personalize accounts with an expandable palette of 32 designer colors and 66 curated icons.
+- **Goals & UI Refinements**: Polished goal management screen and smoother animations throughout account creation and editing.
+
+---
+
+## [6.0.8]
+
+### Changed & Fixed
+- **Dedicated Screen for Goals**: Converted goal creation and editing into a dedicated separate screen instead of a bottom sheet.
+- **Fixed Create Goal Button**: Resolved issue where the save/create goal button was hidden or jumping.
+
+---
+
+## [6.0.7]
+
+### Added & Highlighted
+- **Savings Goals & Visual Pots**: Create dedicated goal pots with 0%–100% circular bracket progress fills. Add and withdraw funds directly without affecting daily spending and income analytics.
+- **Original Messages & App Attribution**: Audit the exact raw SMS or notification captured for any transaction with 1-tap copy and verified bank source badges.
+- **Expanded Palette & Icons**: Customize pots and custom categories with 32 designer colors and 55+ Lucide icons.
+- **Split Expenses Polish**: Modern split expense setup with status bar padding, live auto-balancing (Equal, Exact, Percentage), and instant WhatsApp/text breakdown sharing.
+- **Multi-Device Pro License Sync**: Enhanced licensing engine with background sync, multi-device management, and localized expiration/revocation notices.
+
+---
+
+## [6.0.2]
+
+### Added & Highlighted
+- **Full Polish Language Localization**: Added complete Polish (`pl`) translation covering all 692 string keys across all screens, dialogs, widgets, and onboarding.
+- **Regional Polish Pricing (PLN / zł)**: Configured 50% purchasing power parity (PPP) tier for Poland in Cipher Pro paywall.
+- **In-App Update Safety**: Limited Play Store in-app update checks exclusively to installs from Google Play, keeping sideloaded GitHub releases free from store prompts.
+
+---
+
+## [6.0.1]
+
+### Added & Highlighted
+- **Cipher Pro Membership**: Flexible Monthly, 6-Month, 1-Year, and Lifetime VIP passes to unlock unlimited custom categories, Pro home widgets, custom PDF/CSV statement exports, and themes.
+- **Home Screen Widgets Suite**: 6 live Glance widgets (2 free: Budget & Daily Stats; 4 Pro: Accounts Overview, Passbook Recent Transactions, Daily Allowance Gauge, and Quick-Log 1-Tap Tracker).
+- **Advanced Account Analytics**: In-depth burn rate, cash flow velocity, top merchant insights, and category trends per individual account/wallet.
+- **Multi-Account Transfers**: Move funds between savings, credit cards, cash, and vault accounts seamlessly.
+- **Automated Encrypted Backups**: Scheduled background backups with PBKDF2 AES-GCM encryption.
+
+### Fixed & Improved
+- **Paywall Pricing & Localization**: Added locale-aware pricing that automatically adapts currency symbols and baseline amounts (INR, BDT, JPY, GBP, EUR, USD) according to your device's region.
+- **Pro Licensing Sync**: Added background license verification with a 30-day offline grace period so pro features remain active without internet dependency.
+- **Annual Pass Savings Display**: Updated the annual pass discount badge to reflect accurate savings.
+- **Optimized Binary Size**: Targeted ABI filters to `arm64-v8a` and `armeabi-v7a` for a lightweight download footprint.
+- **Target SDK 37 & Min SDK 26**: Built for modern Android 17 and Android 8.0+.
+- **Redesigned Onboarding**: Instant zero-friction account setup flow.
+
+---
+
+## [6.0.0]
+
+### Added
+- **Cipher Pro Membership**: Flexible Monthly, 6-Month, 1-Year, and Lifetime VIP passes to unlock unlimited custom categories, Pro home widgets, custom PDF/CSV statement exports, and themes.
+- **Home Screen Widgets Suite**: 6 live Glance widgets (2 free: Budget & Daily Stats; 4 Pro: Accounts Overview, Passbook Recent Transactions, Daily Allowance Gauge, and Quick-Log 1-Tap Tracker).
+- **Advanced Account Analytics**: In-depth burn rate, cash flow velocity, top merchant insights, and category trends per individual account/wallet.
+- **Multi-Account Transfers**: Move funds between savings, credit cards, cash, and vault accounts seamlessly.
+- **Automated Encrypted Backups**: Scheduled background backups with PBKDF2 AES-GCM encryption.
+
+### Changed & Improved
+- **Optimized Binary Size**: Targeted ABI filters to `arm64-v8a` and `armeabi-v7a` for a lightweight ~14 MB download footprint.
+- **Target SDK 37 & Min SDK 26**: Built for modern Android 17 and Android 8.0+.
+- **Redesigned Onboarding**: Instant zero-friction account setup flow.
+
+---
+
+## [5.6.1]
+
+### Added
+- **Custom Categories**: Create, edit, and personalize spending categories with custom Lucide icons and vibrant accent colors.
+- **Quick Category Creation**: Add new custom categories on the fly directly inside the transaction and subscription sheets without losing your draft.
+- **Smart Rules for Clean Merchant Names & Categories**: Automatically rename cryptic bank/SMS merchant names into clean, readable names and auto-assign them to your preferred categories.
+- **Category Budgets & Breakdown**: Set monthly budgets for individual categories and view color-coordinated allocation charts and merchant breakdowns in Insights.
+
+### Changed & Improved
+- **Encrypted Backup & Export Integration**: Custom categories and smart rules are fully preserved in encrypted `.cipher` vault backups, CSV spreadsheets, and PDF statements.
+- **Category Picker Redesign**: Redesigned category selection sheets with edge-to-edge support, compact layout, and direct quick-add buttons.
+- **Persistent Settings State**: Retained expanded sections when navigating between Settings and sub-screens.
+
+---
+
+## [5.5.0]
+
+### Added
+- **Split Expenses**: Easily split bills with friends, track individual shares, and monitor settled vs unsettled balances with time filters.
+- **Adjust Account Balance**: Tap the edit icon directly next to your hero balance on the dashboard to align your balance with your bank account.
+- **New Currencies**: Added support for Mexican Peso (MXN) and Brazilian Real (BRL) with proper locale formatting.
+- **Compact Navigation Bar**: Optional compact mode in Settings for a smaller navigation bar that gives more vertical screen space.
+
+### Changed & Improved
+- **UPI Push Notification Parsing**: Enhanced parser coverage for incoming and outgoing payment alerts across Paytm, Google Pay.
+- **Transaction Deduplication**: Updated duplicate detection to distinguish incoming credits from outgoing debits when identical amounts occur in the same time window.
+- **Currency Display Fix**: Fixed currency symbol formatting in category sheets.
+
+---
+
+## [5.2.1]
+
+### Fixed
+- **Currency Auto-Detection**: Fixed default currency fallback to properly respect regional settings and locale across fresh installs and device updates.
+- **First Launch Dashboard Flash**: Eliminated the split-second Dashboard screen flicker before the Onboarding welcome screen appears on fresh installs or data reset.
+- **Onboarding Permission Badge Layout**: Fixed letter wrapping and text alignment on the active capability badge across high-DPI and narrow screens.
+
+---
+
+## [5.2.0]
+
+### Added
+- **Multi-Currency Support**: Full currency personalization across the app. Set custom or regional currencies with automatic thousand/decimal formatting, localized parser rules (US, UK, Europe, UAE, Canada, Australia, Singapore, India, Bangladesh, Japan), and currency-accurate PDF exports.
+- **Multilingual Support**: Fully localized in 7 languages (English, Hindi, Bengali, Japanese, Spanish, French, and German). All dates, months, and UI labels adapt instantly while keeping number digits universally readable.
+- **Custom Transaction Dates**: Select and edit exact dates and times when adding or editing transactions.
+- **Redesigned Onboarding**: Clean, friendly first-time setup flow with language selection right at the start, accent color and theme previews, and a swipe-to-confirm completion slider.
+
+### Changed & Improved
+- **Smooth Page Navigation**: Upgraded screen transitions with spring physics and zero stutter between steps.
+- **Consistent Number Formatting**: Standardized numeric digits to clean Western numerals across all languages, keeping balances and financial calculations crisp and unambiguous.
+- **Localized Date & Time Pickers**: Custom date ranges, headers, and buttons now follow your selected language.
+
+---
+
+## [5.1.0]
+
+### Added
+- **Dynamic & Fixed Budget Modes**: Support for both strict fixed spending limits and income-adjusted dynamic budgets. In dynamic mode, received income automatically increases your effective monthly spending limit.
+- **Full-Width Budget Editor**: Redesigned monthly budget configuration into a spacious bottom sheet with currency inputs, quick preset chips (+1k, +5k, +10k, +25k), and real-time total calculation previews.
+- **Dual-Layer Budget Progress Bar**: Visual breakdown showing base budget utilization alongside extra spending capacity from income, rendered with rounded capsule caps.
+
+### Changed & Improved
+- **Symmetrical 2-Stage Dashboard Scrolling**: Refined nested scroll physics so fast fling gestures stop cleanly when the hero balance docks or returns to the top, requiring a deliberate second stroke to continue scrolling.
+- **Hardware-Accelerated Progress Animation**: Migrated progress bar rendering to GPU draw operations (`drawBehind`), eliminating CPU layout passes during animations.
+
+---
+
+## [5.0.1]
+
+### Fixed
+- **Category Detail Sheet Stability**: Redesigned the category detail view as a dedicated slide-up modal with pinned category header and close button, eliminating nested fling jumps and accidental dismissals.
+- **Large Number & Text Overflow Protection**: Added dynamic font scaling, overflow ellipsis, and compact currency formatting across Dashboard balance, charts, habit breakdowns, and transaction cards to prevent layout distortion from extreme numbers.
+
+---
+
+## [5.0.0]
+
+### Added
+- **Domain Tabs in Insights**: Organized the Insights screen into three distinct tabs (Spending, Habits, and Recurring) with a sliding indicator.
+- **Financial Flow Trends**: Added cash flow curves with quick switching between Expense, Income, and Net trends, complete with interactive drag scrubbing.
+- **Overview Card**: Replaced the previous insights header with an overview card highlighting your top spend category, no-spend streak, daily run-rate, and average spend per transaction.
+- **Advanced Filter Ledger**: Redesigned the transaction filter sheet with type selectors (All, Expenses, Income), multi-category selection chips, and minimum/maximum amount range sliders.
+- **Custom Date Ranges**: Redesigned the time interval picker with direct options for This Week, Last Week, This Month, Last Month, This Year, All Time, and custom start/end date selection.
+- **Subscriptions Hub**: Redesigned recurring bills with monthly commitment totals, annual cost estimates, countdown badges, and manual subscription creation, editing, and deletion with undo support.
+- **Notification Preferences**: Added dedicated toggles in Settings for transaction alerts, budget limit warnings (50%, 90%, 100%), daily spending recaps, monthly wrap-ups, and subscription reminders.
+
+### Changed & Improved
+- **List Scroll Performance**: Removed artificial stagger delays on scrolled items for instant, smooth 120fps list rendering.
+- **Segmented Control Interactions**: Removed touch ripple shadows across tab controls in favor of spring sliding indicators.
+- **Currency Format Consistency**: Standardized currency prefixes so the rupee symbol consistently appears before negative signs across balances and charts.
+- **Settings Header**: Redesigned the top settings header and search bar with an accent-tinted border.
+
+---
+
+## [4.9.0]
+- **Settings Search**: Added a search bar at the top of the Settings screen to easily find options.
+- **Check for Updates**: Added a button to check for app updates (found in Settings > About & Support).
+- **Diagnostics**: Added an option to view crash logs. You can copy and send them to the developer using the "Contact Developer" email option right below it in Settings.
+- **Settings Layout**: Centered footer logo based on screen size dynamically.
+
+## [4.8.1]
+
+### Fixed
+- **Merchant Alias Bug**: Fixed a critical bug where manually editing a transaction's merchant name would silently and incorrectly rename all future transactions from that original merchant.
+
+---
+
+## [4.8.0]
+
+### Added
+- **Smart Rules**: You can now create custom rules to automatically categorize your transactions. Just edit a transaction, and you'll get an option to save your category choice for all future transactions from that merchant. You can manage these rules in Settings > Smart Rules.
+- **Transaction Notes**: Added a simple note field so you can type down who you split a bill with or what exactly you bought when adding or editing a transaction.
+- **Settings UI Redesign**: Redesigned the Smart Rules screen and Category dropdowns in Settings to look a lot cleaner and properly organized.
+
+### Fixed
+- Fixed an annoying bug where the keyboard would randomly close when tapping on the category dropdown.
+- Handled several Google Play Console requirements (R8 resource shrinking and dependency upgrades) to keep the app compliant.
+
+---
+
+## [4.7.2]
+  
+### Fixed
+- Policy Compliance: Removed `QUERY_ALL_PACKAGES` permission and replaced it with specific intent queries to comply with Google Play's strict policy requirements.
+
+---
+
+## [4.7.1]
+
+### Fixed
+- Fixed an issue where the Dashboard would display an empty state even if there were historical transactions.
+- Synchronized time filters across the Dashboard and Insights tabs for a seamless experience.
+- Cleaned up several minor compilation warnings and deprecated APIs to maintain code health.
+
+---
+
+## [4.7.0]
+
+### Added
+- **Push Notifications**: Added background notifications to warn you when your spending crosses 50%, 90%, and 100% of your monthly budget. Also added a quick nudge to remind you to categorize any "Others" transactions.
+- **Daily & Monthly Summaries**: The app now pushes a daily spending recap every evening (only on days you actually spent money) and a monthly wrap-up on the 1st of every month.
+- **Transaction Draft Persistence**: Manual transaction entries are now automatically saved as drafts. If you accidentally switch away to another app while adding a transaction, your amounts and text will be waiting for you when you switch back.
+
+---
+
+## [4.6.0]
+
+### Added
+- **Modern Home Screen Widgets**: Complete visual overhaul of `Budget Progress` and `Monthly Overview` home screen Glance widgets with dynamic dark/light theme support, user accent color synchronization, and high-precision touch handling for instant manual refresh.
+- **Launcher Widget Previews**: Added dedicated launcher picker preview cards (`widget_preview_budget_layout` & `widget_preview_stats_layout`) so widgets render accurate visual previews when added to the home screen.
+- **Precision Numpad Cursor Control**: Enhanced manual transaction entry and editing sheets to allow tap-to-place cursor positioning anywhere in numbers with soft keyboard suppression and selection-aware insertion/deletion.
+
+### Changed
+- **Target SDK Upgrade**: Updated `targetSdk` and `compileSdk` to **37 (Android 17)** to meet Google Play's latest target API level requirements.
+- **Insights Render Performance**: Optimized `CategoryAllocationDonut` with `@Immutable` data stability and cached calculations, eliminating unnecessary recompositions and frame drops during scrolling.
+- **Haptic Feedback**: Added responsive tactile haptic vibration to the Activity Calendar month navigation buttons on the Insights screen.
+
+## [4.5.0]
+
+### Added
+- **Dashboard Scrolling**: The main dashboard header now scales and pins to the top as you scroll.
+- **Big Number Formatting**: Balances over 10k dynamically scale their font size to prevent overflow clipping.
+- **Custom Native Charts**: Built native Compose Canvas implementations for the Spending Trend, Peak Hours, and Category Allocation charts.
+- **Calendar Paging**: The Activity Heatmap is now split and paginated by month.
+- **Weekly Filters**: Added a 'This Week' filter option to the transaction dropdown.
+
+### Changed
+- **Dropped Vico**: Removed the `vico` charting dependency entirely to reduce APK size and improve render performance.
+- **State Management**: Switched all UI state collection to `collectAsStateWithLifecycle` to prevent background memory leaks.
+- **Library Updates**:
+  - Kotlin: 2.1.10 → 2.4.10
+  - Compose BOM: 2025.01.01 → 2026.06.01
+  - AGP: 8.8.0 → 8.12.0
+  - Room: 2.6.1 → 2.8.4
+  - Hilt: 2.55 → 2.57.1
+  - KSP: 2.1.10-1.0.29 → 2.3.10
+  - Kotlinx Serialization: 1.7.3 → 1.8.0
+
+## [4.2.0]
+
+### Added
+- **Automated Backups**: You can now configure Cipher to automatically backup your encrypted database to a local folder or cloud-synced directory on a regular schedule.
+- **Inline Calculator**: Need to split a bill? You can now perform math directly inside the amount field when adding or editing transactions.
+- **Onboarding Personalization**: New users can now select their preferred Accent Color directly during the first-run onboarding flow.
+
+### Changed
+- **Fluid Keyboard Padding**: Bottom sheets now dynamically slide up when the system keyboard appears, preventing input fields from ever being hidden.
+- **Massive Balance Handling**: Enhanced the dashboard UI to gracefully handle and truncate astronomically large balances without breaking the layout.
+
+---
+
+## [4.1.0]
+
+### Added
+- **App Notification Parsing**: Utilizes `NotificationListenerService` to capture and parse transaction alerts from finance and UPI applications.
+- **Target App Management**: Users can explicitly select which applications Cipher should monitor for transaction notifications.
+- **Custom Accent Colors**: Introduced dynamic theming options allowing users to personalize the app's primary accent color.
+- **Permissions Health Dashboard**: Diagnostic interface in Settings to verify and resolve missing permissions (SMS, Notification Access).
+- **Interactive App Tour**: A swipeable guide integrated into the onboarding flow to educate new users on core functionality.
+- **Play Store Link**: Added direct intent to review the application on Google Play.
+- **Developer Contact**: Added email intent for direct support requests.
+
+### Changed
+- **Unified Parsing Engine**: Expanded `SmsParser` to process both SMS and push notification payloads seamlessly.
+- **Settings Reorganization**: Restructured the About section into distinct Support and Application information groups.
+- **Dark Mode Legibility**: Adjusted typography weights and updated secondary text colors to `onSurfaceVariant` to improve contrast in dark themes.
+- **Privacy Policy**: Updated in-app and documentation text to reflect the usage of `POST_NOTIFICATIONS` for local budget alerts.
+
+---
+
+## [4.0.0]
+
+### Added
+- **Major Redesign**: Complete visual overhaul with premium colors, typography, and component styling.
+- **Floating Navigation Bar**: A sleek, pill-shaped centered navigation bar for main app routing.
+- **Advanced Insights Charts**: Integrated high-performance custom Canvas-based charts for fluid spending velocity charts and enhanced data visualization.
+- **Scrollable Activity Calendar**: Upgraded the calendar heatmap to support horizontal scrolling with clear month headers and today-highlighting.
+- **Promotional SMS Detection**: Intelligent filtering to automatically identify and drop promotional texts and spam.
+- **Transaction Sorting**: Added capability to sort transactions by spend amount directly on the dashboard.
+- **Informal SMS Support**: Updated parsing rules to detect manual test messages (e.g. "sent 1000 rs") for easier manual testing.
+- **Sponsors Page**: Added a section to recognize project sponsors.
+
+### Changed
+- **Architecture Upgrade**: Decoupled `MainActivity` into `MainViewModel` & `MainContract`, and moved business logic into a dedicated `UseCase` layer.
+- **Pattern Externalization**: Extracted hardcoded regex, keywords, and brand mappings from `SmsParser` and `CategorizerEngine` into centralized configuration objects.
+- **Robust SMS Processing**: Upgraded `SmsReceiver` to utilize `goAsync()` for highly reliable background database writes.
+- **Empty State UX**: Implemented a smooth loading indicator on app launch to prevent jarring flashes of the empty state screen.
+
+### Fixed
+- **Status Bar Overlap**: Corrected system window insets padding on the onboarding screens so content no longer clips under the device status bar.
+- **Categorizer Edge Cases**: Resolved edge cases in the categorization engine and expanded test coverage.
+
+---
+
+## [3.0.0]
+
+### Added
+- **First-run onboarding**: Two-screen welcome flow with SMS permission gate — new users no longer land cold on the dashboard.
+- **Home screen widgets**: BudgetWidget shows monthly spend vs. budget at a glance; StatsWidget shows monthly income and expense summary.
+- **Privacy Policy screen**: Dedicated in-app screen explaining data handling and permissions.
+- **Feedback form**: In-app feedback submission.
+- **Investment category**: New transaction category with dedicated icon for tracking investments and SIPs.
+- **More metrics in Insights**: Additional spending patterns and trend data on the intelligence screen.
+- **49 unit tests**: 42 core SMS parsing tests + 7 additional tests covering rupee symbol variants — all passing.
+- **Install guide**: Dedicated [INSTALL.md](INSTALL.md) with step-by-step sideload instructions including the Android 13+ restricted SMS permission setup.
+
+### Changed
+- **SMS parsing accuracy**: Edited exclusion keyword list to reduce false positives; fixed edge cases in debit/credit classification; added 8 new brands to the merchant dictionary.
+- **Transaction icons**: Category icons replace merchant initials in the transaction list for faster visual scanning.
+- **Dashboard UI**: Removed blue accent patterns from stat pills, the intelligence row, and the add button — color only appears where it carries meaning (income green, expense red).
+- **New app icon**: Replaced previous icon with updated design.
+- **Smoother animations**: Refined animation specs across the app to reduce jank.
+- **Brand casing**: App name rendered as lowercase "cipher" consistently across all screens.
+
+### Fixed
+- **Widget race condition**: Fixed a race condition in widget state updates that could cause stale data to appear.
+- **Merchant alias bug**: Fixed incorrect alias resolution for certain merchants.
+- **Font fallback**: Fixed a crash/rendering issue caused by missing font fallback configuration.
+- **Package name**: Corrected package name inconsistency introduced in an earlier build.
+- **BudgetCard rendering**: Removed double-background bug causing a visible overlay artifact on the card border.
+- **Biometric gate**: Lock screen no longer triggers during first-run onboarding.
+- **Onboarding click-through**: Dashboard buttons no longer respond to taps while onboarding is visible.
+
+---
+
+## [2.1.0]
+
+### Fixed
+- **Encrypted Backups**: Resolved a critical issue where the app's auto-lock would prevent the password dialog from appearing during import/export.
+- **Biometric Persistence**: Improved UI architecture to preserve app state and pending actions across biometric unlock cycles.
+
+---
+
+## [2.0.1]
+
+### Fixed
+- **App Launcher**: Fixed an issue where the icon appeared as a white mascot on some devices; updated to a custom blue vault logo.
+
+---
+
+## [2.0.0]
+
+### Added
+- **Subscription Intelligence**: Offline engine for detecting recurring payments and predicting billing cycles.
+- **Monthly Budgeting**: Spending limit configuration with real-time tracking on the dashboard.
+- **Manual Ledger Management**: Full CRUD support for adding, editing, and deleting transactions.
+- **Undo System**: Recovery mechanism for accidental transaction deletions.
+- **Data Portability**: CSV export functionality for external financial analysis.
+- **Tactile Feedback**: Haptic feedback with a dedicated toggle in settings.
+
+### Changed
+- **Header Redesign**: Shifted to a bolder, left-aligned title for improved readability.
+- **Enhanced Search**: Reactive filtering system for merchants and categories.
+- **Parsing Logic**: Heuristic improvements to reduce false positives from non-transactional messages.
+- **Performance**: Optimized animation specs and list rendering to reduce frame drops.
+
+### Fixed
+- **Biometric Handling**: Resolved blank screen issues during app resume; implemented dedicated lock screen UI.
+- **Lifecycle Logic**: Fixed auto-lock timer inconsistencies during rapid app switching.
+---
+
+## [1.0.0]
+- Initial release.
+- Automated SMS parsing.
+- Encrypted local storage (SQLCipher).
+- Biometric authentication.
+- Core Dashboard and Insights.

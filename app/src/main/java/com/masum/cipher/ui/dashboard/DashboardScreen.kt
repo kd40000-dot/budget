@@ -1,0 +1,2591 @@
+package com.masum.cipher.ui.dashboard
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.masum.cipher.BuildConfig
+import com.masum.cipher.R
+import com.masum.cipher.core.data.local.entity.CustomCategoryEntity
+import com.masum.cipher.core.data.local.entity.TransactionEntity
+import com.masum.cipher.core.data.local.pref.UserPreferences
+import com.masum.cipher.core.domain.model.CategoryHelper
+import com.masum.cipher.core.domain.model.SplitParticipant
+import com.masum.cipher.core.domain.model.TransactionCategory
+import com.masum.cipher.core.util.AppFormatters
+import com.masum.cipher.core.util.performVibrate
+import com.masum.cipher.ui.components.AdjustBalanceSheet
+import com.masum.cipher.ui.components.AnimatedNumberTicker
+import com.masum.cipher.ui.components.StaggeredEntranceItem
+import com.masum.cipher.ui.components.TimeSelectorDropdown
+import com.masum.cipher.ui.components.TransactionDetailsSheet
+import com.masum.cipher.ui.components.TransactionSplitSheet
+import com.masum.cipher.ui.components.TransactionListSkeleton
+import com.masum.cipher.ui.components.VaultCard
+import com.masum.cipher.ui.components.VaultMotion
+import com.masum.cipher.ui.components.WhatsNewSheet
+import com.masum.cipher.ui.theme.DMSans
+import com.masum.cipher.ui.theme.EmeraldIncome
+import com.masum.cipher.ui.theme.Lato
+import com.masum.cipher.ui.theme.RoseExpense
+import com.masum.cipher.ui.theme.Typography
+import compose.icons.LucideIcons
+import compose.icons.lucideicons.Activity
+import compose.icons.lucideicons.ArrowDown
+import compose.icons.lucideicons.ArrowUp
+import compose.icons.lucideicons.BellRing
+import compose.icons.lucideicons.Calendar
+import compose.icons.lucideicons.Crown
+import compose.icons.lucideicons.Info
+import compose.icons.lucideicons.Pencil
+import compose.icons.lucideicons.Search
+import compose.icons.lucideicons.SlidersHorizontal
+import compose.icons.lucideicons.Star
+import compose.icons.lucideicons.Users
+import compose.icons.lucideicons.X
+import com.masum.cipher.core.domain.model.AccountItem
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import java.util.Date
+import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardScreen(
+    viewModel: DashboardViewModel,
+    userPreferences: UserPreferences,
+    onNavigateToManageApps: () -> Unit,
+    onNavigateToAccounts: () -> Unit = {},
+    onNavigateToPro: () -> Unit = {}
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val locale = LocalLocale.current.platformLocale
+    val settings by userPreferences.settingsFlow.collectAsStateWithLifecycle(initialValue = null)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val view = androidx.compose.ui.platform.LocalView.current
+
+    val isHapticsEnabled = settings?.isHapticsEnabled ?: true
+    val privacyMode = settings?.isPrivacyModeEnabled ?: false
+
+
+    var editingTransaction by remember { mutableStateOf<TransactionEntity?>(null) }
+    var draftEditingSplits by remember { mutableStateOf<Map<Long, List<SplitParticipant>>>(emptyMap()) }
+    var draftNewSplits by remember { mutableStateOf<List<SplitParticipant>>(emptyList()) }
+    var showAddSheet by remember { mutableStateOf(false) }
+    var showAdjustBalanceSheet by remember { mutableStateOf(false) }
+    var showFilterSheet by remember { mutableStateOf(false) }
+    var activeSplittingTx by remember { mutableStateOf<Pair<TransactionEntity, List<SplitParticipant>>?>(null) }
+
+
+    val coroutineScope = rememberCoroutineScope()
+    
+    val currentVersionCode = BuildConfig.VERSION_CODE
+    val lastSeenWhatsNewVersionCode = settings?.lastSeenWhatsNewVersionCode ?: 0
+    val shouldShowWhatsNew = settings != null && settings?.hasCompletedOnboarding == true && lastSeenWhatsNewVersionCode < currentVersionCode
+    var showWhatsNewSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(shouldShowWhatsNew) {
+        if (shouldShowWhatsNew) {
+            showWhatsNewSheet = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effect.collectLatest { effect ->
+            if (effect is DashboardContract.Effect.ShowUndoDelete) {
+                val result = snackbarHostState.showSnackbar(
+                    message = "Transaction deleted",
+                    actionLabel = "UNDO",
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    view.performVibrate(isHapticsEnabled, isLongPress = true)
+                    viewModel.handleIntent(DashboardContract.Intent.RestoreTransaction(effect.transaction, effect.splits))
+                }
+            }
+        }
+    }
+
+    var hasCheckedReview by remember { mutableStateOf(false) }
+    var showRatingDialog by remember { mutableStateOf(false) }
+    var showComparisonExplanation by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(Unit) {
+        val activity = context as? android.app.Activity
+        val intent = activity?.intent
+        if (intent?.getStringExtra("navigate_to") == "transaction_details") {
+            val transactionId = intent.getLongExtra("transaction_id", -1L)
+            if (transactionId != -1L) {
+                val tx = state.transactions.find { it.id == transactionId }
+                if (tx != null) {
+                    editingTransaction = tx
+                    intent.removeExtra("navigate_to")
+                    intent.removeExtra("transaction_id")
+                }
+            }
+        }
+    }
+    LaunchedEffect(settings) {
+        if (settings != null && !hasCheckedReview) {
+            hasCheckedReview = true
+            userPreferences.incrementAppLaunchCount()
+            val currentLaunchCount = settings!!.appLaunchCount + 1
+            
+            if (currentLaunchCount >= settings!!.reviewPromptInterval && !settings!!.hasPromptedReview) {
+                showRatingDialog = true
+            }
+        }
+    }
+
+    BackHandler(enabled = state.searchQuery.isNotEmpty()) {
+        viewModel.handleIntent(DashboardContract.Intent.SearchTransactions(""))
+    }
+
+    val shouldShowSkeleton by produceState(initialValue = false, key1 = state.isLoading, key2 = state.transactions.isEmpty()) {
+        if (state.isLoading && state.transactions.isEmpty()) {
+            kotlinx.coroutines.delay(200.milliseconds)
+            value = true
+        } else {
+            value = false
+        }
+    }
+
+    val mainScale by animateFloatAsState(
+        targetValue = if (showAddSheet || editingTransaction != null || activeSplittingTx != null || showAdjustBalanceSheet) 0.93f else 1f,
+        animationSpec = VaultMotion.LayoutSpring,
+        label = "MainScale"
+    )
+    val mainCorner by animateDpAsState(
+        targetValue = if (showAddSheet || editingTransaction != null || activeSplittingTx != null || showAdjustBalanceSheet) 32.dp else 0.dp,
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 300f),
+        label = "MainCorner"
+    )
+
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val maxToolbarHeight = remember(windowInfo.containerSize.height, density) {
+        val heightDp = with(density) { windowInfo.containerSize.height.toDp() }
+        (heightDp * 0.30f).coerceIn(220.dp, 270.dp)
+    }
+    val minToolbarHeight = 154.dp
+    val toolbarHeightRangePx = with(density) { (maxToolbarHeight - minToolbarHeight).roundToPx().toFloat() }
+    val toolbarOffsetHeightPx = androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val animatedToolbarOffset by animateFloatAsState(
+        targetValue = toolbarOffsetHeightPx.floatValue,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "AnimatedToolbarOffset"
+    )
+
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    val nestedScrollConnection = remember(toolbarHeightRangePx) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (state.searchQuery.isNotEmpty()) return androidx.compose.ui.geometry.Offset.Zero
+                val delta = available.y
+                if (delta < 0) {
+                    val previousOffset = toolbarOffsetHeightPx.floatValue
+                    val newOffset = (previousOffset + delta).coerceIn(-toolbarHeightRangePx, 0f)
+                    val consumed = newOffset - previousOffset
+                    toolbarOffsetHeightPx.floatValue = newOffset
+                    return androidx.compose.ui.geometry.Offset(0f, consumed)
+                } else if (delta > 0 && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
+                    val previousOffset = toolbarOffsetHeightPx.floatValue
+                    val newOffset = (previousOffset + delta).coerceIn(-toolbarHeightRangePx, 0f)
+                    val consumedOffset = newOffset - previousOffset
+                    toolbarOffsetHeightPx.floatValue = newOffset
+                    return androidx.compose.ui.geometry.Offset(0f, consumedOffset)
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: androidx.compose.ui.geometry.Offset,
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                if (state.searchQuery.isNotEmpty()) return androidx.compose.ui.geometry.Offset.Zero
+                val delta = available.y
+                if (delta > 0) {
+                    return androidx.compose.ui.geometry.Offset(0f, delta)
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                if (state.searchQuery.isNotEmpty()) return androidx.compose.ui.unit.Velocity.Zero
+                val velocity = available.y
+                if (velocity < 0f && toolbarOffsetHeightPx.floatValue > -toolbarHeightRangePx) {
+                    toolbarOffsetHeightPx.floatValue = -toolbarHeightRangePx
+                    return available
+                }
+                if (velocity > 0f && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 && toolbarOffsetHeightPx.floatValue < 0f) {
+                    toolbarOffsetHeightPx.floatValue = 0f
+                    return available
+                }
+                return androidx.compose.ui.unit.Velocity.Zero
+            }
+
+            override suspend fun onPostFling(
+                consumed: androidx.compose.ui.unit.Velocity,
+                available: androidx.compose.ui.unit.Velocity
+            ): androidx.compose.ui.unit.Velocity {
+                if (state.searchQuery.isNotEmpty()) return androidx.compose.ui.unit.Velocity.Zero
+                val velocity = available.y
+                if (velocity > 0f) {
+                    return available
+                }
+                return androidx.compose.ui.unit.Velocity.Zero
+            }
+        }
+    }
+
+    LaunchedEffect(state.searchQuery) {
+        if (state.searchQuery.isNotEmpty()) {
+            toolbarOffsetHeightPx.floatValue = 0f
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .nestedScroll(nestedScrollConnection)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }
+    ) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            snackbarHost = { 
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.padding(bottom = 100.dp)
+                ) 
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(mainCorner.coerceAtLeast(0.dp)))
+                .graphicsLayer {
+                    this.scaleX = mainScale
+                    this.scaleY = mainScale
+                }
+        ) { padding ->
+            val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            
+            val searchTransition by animateFloatAsState(
+                targetValue = if (state.searchQuery.isEmpty()) 0f else 1f,
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                label = "SearchTransition"
+            )
+
+            val groupedTransactions = remember(state.transactions, locale) {
+                state.transactions.groupBy {
+                    AppFormatters.getMonthYearFormat(locale).format(Date(it.timestamp))
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = padding.calculateBottomPadding())
+                        .layout { measurable, constraints ->
+                            val extraHeight = toolbarHeightRangePx.toInt()
+                            val placeable = measurable.measure(
+                                constraints.copy(
+                                    minHeight = constraints.maxHeight + extraHeight,
+                                    maxHeight = constraints.maxHeight + extraHeight
+                                )
+                            )
+                            layout(placeable.width, constraints.maxHeight) {
+                                placeable.placeRelative(0, 0)
+                            }
+                        }
+                        .graphicsLayer {
+                            if (searchTransition > 0f) {
+                                val offsetPx = (maxToolbarHeight.toPx() - 80.dp.toPx())
+                                translationY = -(offsetPx * searchTransition)
+                            } else {
+                                translationY = animatedToolbarOffset
+                            }
+                        },
+                    contentPadding = PaddingValues(
+                        top = maxToolbarHeight + statusBarHeight, 
+                        bottom = 140.dp
+                    )
+                ) {
+                    dashboardTransactionListContent(
+                        state = state,
+                        groupedTransactions = groupedTransactions,
+                        privacyMode = privacyMode,
+                        isHapticsEnabled = isHapticsEnabled,
+                        view = view,
+                        shouldShowSkeleton = shouldShowSkeleton,
+                        locale = locale,
+                        onSkipSubscription = { viewModel.handleIntent(DashboardContract.Intent.SkipSubscription(it)) },
+                        onApproveSubscription = { viewModel.handleIntent(DashboardContract.Intent.ApproveSubscription(it)) },
+                        onOpenFilterSheet = { showFilterSheet = true },
+                        onResetFilter = {
+                            view.performVibrate(isHapticsEnabled, isLongPress = false)
+                            viewModel.handleIntent(DashboardContract.Intent.ResetDashboardFilter)
+                        },
+                        onTransactionClick = { transaction ->
+                            view.performVibrate(isHapticsEnabled)
+                            editingTransaction = transaction
+                        }
+                    )
+                }
+                
+                DashboardHero(
+                    totalBalance = state.totalBalance,
+                    income = state.totalIncome,
+                    expense = state.totalExpenses,
+                    currencySymbol = state.currencySymbol,
+                    selectedPeriod = state.selectedTimePeriod,
+                    selectedTimeRange = state.selectedTimeRange,
+                    transactions = state.transactions,
+                    onPeriodSelected = { period, start, end ->
+                        viewModel.handleIntent(DashboardContract.Intent.SetTimePeriod(period, start, end))
+                    },
+                    searchQuery = state.searchQuery,
+                    onSearchQueryChanged = { viewModel.handleIntent(DashboardContract.Intent.SearchTransactions(it)) },
+                    filter = state.filter,
+                    onOpenFilter = { showFilterSheet = true },
+                    privacyMode = privacyMode,
+                    isHapticsEnabled = isHapticsEnabled,
+                    isPro = (settings?.isPro == true) && (settings?.showProBadge != false),
+                    expenseComparisonPercent = state.expenseComparisonPercent,
+                    onComparisonBadgeClick = { showComparisonExplanation = true },
+                    onAdjustBalanceClick = { showAdjustBalanceSheet = true },
+                    toolbarOffsetHeightPx = animatedToolbarOffset,
+                    toolbarHeightRangePx = toolbarHeightRangePx,
+                    maxToolbarHeight = maxToolbarHeight
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                        .offset(y = maxToolbarHeight + statusBarHeight)
+                        .graphicsLayer {
+                            if (searchTransition > 0f) {
+                                val offsetPx = (maxToolbarHeight.toPx() - 80.dp.toPx())
+                                translationY = -(offsetPx * searchTransition)
+                            } else {
+                                translationY = animatedToolbarOffset
+                            }
+                            
+                            val progress = if (toolbarHeightRangePx > 0f) {
+                                (kotlin.math.abs(animatedToolbarOffset) / toolbarHeightRangePx).coerceIn(0f, 1f)
+                            } else 0f
+                            
+                            alpha = if (searchTransition > 0f) 1f else progress
+                        }
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.background,
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+        }
+    }
+
+    if (showAddSheet) {
+        AddTransactionSheetHost(
+            draftTransaction = state.draftTransaction,
+            accounts = state.accounts,
+            currencyCode = state.currencyCode,
+            customCategories = state.customCategories,
+            currencySymbol = state.currencySymbol,
+            draftSplits = draftNewSplits,
+            isHapticsEnabled = isHapticsEnabled,
+            onDismiss = { showAddSheet = false },
+            onSaveSplits = { updatedSplits -> draftNewSplits = updatedSplits },
+            onDraftChange = { updatedDraft -> viewModel.handleIntent(DashboardContract.Intent.UpdateDraftTransaction(updatedDraft)) },
+            onConfirm = { newTransaction ->
+                view.performVibrate(isHapticsEnabled, isLongPress = true)
+                viewModel.handleIntent(DashboardContract.Intent.AddTransaction(newTransaction))
+                viewModel.handleIntent(DashboardContract.Intent.UpdateDraftTransaction(null))
+                draftNewSplits = emptyList()
+                showAddSheet = false
+            },
+            onConfirmWithSplits = { newTransaction, splits ->
+                view.performVibrate(isHapticsEnabled, isLongPress = true)
+                viewModel.handleIntent(DashboardContract.Intent.AddTransaction(newTransaction, splits))
+                viewModel.handleIntent(DashboardContract.Intent.UpdateDraftTransaction(null))
+                draftNewSplits = emptyList()
+                showAddSheet = false
+            },
+            onCreateCustomCategory = { name, iconName, colorHex ->
+                viewModel.handleIntent(DashboardContract.Intent.CreateCustomCategory(name, iconName, colorHex))
+            },
+            onUpdateCustomCategory = { id, oldName, newName, iconName, colorHex ->
+                viewModel.handleIntent(DashboardContract.Intent.UpdateCustomCategory(id, oldName, newName, iconName, colorHex))
+            },
+            onDeleteCustomCategory = { entity ->
+                viewModel.handleIntent(DashboardContract.Intent.DeleteCustomCategory(entity))
+            }
+        )
+    }
+
+    if (showAdjustBalanceSheet) {
+        AdjustBalanceSheet(
+            currentBalance = state.totalBalance,
+            currencySymbol = state.currencySymbol,
+            locale = locale,
+            isHapticsEnabled = isHapticsEnabled,
+            onDismiss = { showAdjustBalanceSheet = false },
+            onConfirmAdjustment = { merchant, amount, isIncome, timestamp, note ->
+                val adjustmentTx = TransactionEntity(
+                    amount = amount,
+                    merchant = merchant,
+                    currency = state.currencyCode,
+                    timestamp = timestamp,
+                    category = if (isIncome) TransactionCategory.INCOME.name else TransactionCategory.OTHERS.name,
+                    rawSms = null,
+                    isIncome = isIncome,
+                    note = note
+                )
+                viewModel.handleIntent(DashboardContract.Intent.AddTransaction(adjustmentTx))
+            }
+        )
+    }
+
+    editingTransaction?.let { transaction ->
+        EditTransactionSheetHost(
+            transaction = transaction,
+            accounts = state.accounts,
+            splitsForTransaction = state.splitsByTransactionId[transaction.id] ?: kotlinx.collections.immutable.persistentListOf(),
+            draftSplitsForTransaction = draftEditingSplits[transaction.id],
+            customCategories = state.customCategories,
+            currencySymbol = state.currencySymbol,
+            isHapticsEnabled = isHapticsEnabled,
+            onDismiss = { editingTransaction = null },
+            onSaveSplits = { newSplits ->
+                draftEditingSplits = draftEditingSplits + (transaction.id to newSplits)
+                viewModel.handleIntent(DashboardContract.Intent.SaveTransactionSplits(transaction.id, newSplits))
+            },
+            onConfirm = { updated ->
+                view.performVibrate(isHapticsEnabled, isLongPress = true)
+                viewModel.handleIntent(DashboardContract.Intent.UpdateTransaction(updated))
+                draftEditingSplits = draftEditingSplits - transaction.id
+                editingTransaction = null
+            },
+            onConfirmWithSplits = { updated, splits ->
+                view.performVibrate(isHapticsEnabled, isLongPress = true)
+                viewModel.handleIntent(DashboardContract.Intent.UpdateTransaction(updated))
+                viewModel.handleIntent(DashboardContract.Intent.SaveTransactionSplits(transaction.id, splits))
+                draftEditingSplits = draftEditingSplits - transaction.id
+                editingTransaction = null
+            },
+            onDelete = {
+                viewModel.handleIntent(DashboardContract.Intent.DeleteTransaction(transaction))
+                draftEditingSplits = draftEditingSplits - transaction.id
+                editingTransaction = null
+            },
+            onCreateCustomCategory = { name, iconName, colorHex ->
+                viewModel.handleIntent(DashboardContract.Intent.CreateCustomCategory(name, iconName, colorHex))
+            },
+            onUpdateCustomCategory = { id, oldName, newName, iconName, colorHex ->
+                viewModel.handleIntent(DashboardContract.Intent.UpdateCustomCategory(id, oldName, newName, iconName, colorHex))
+            },
+            onDeleteCustomCategory = { entity ->
+                viewModel.handleIntent(DashboardContract.Intent.DeleteCustomCategory(entity))
+            }
+        )
+    }
+
+    val suggestedParticipants = remember(state.splitsByTransactionId) {
+        state.splitsByTransactionId.values
+            .asSequence()
+            .flatten()
+            .filter { !it.isCurrentUser }
+            .map { it.name.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase(Locale.ROOT) }
+            .toList()
+    }
+
+    activeSplittingTx?.let { (tx, participants) ->
+        TransactionSplitSheet(
+            expenseName = tx.merchant.ifBlank { "Expense" },
+            totalAmount = tx.amount,
+            currencySymbol = state.currencySymbol,
+            initialParticipants = participants,
+            suggestedParticipants = suggestedParticipants,
+            isHapticsEnabled = isHapticsEnabled,
+            onDismiss = { activeSplittingTx = null },
+            onSaveSplits = { updatedSplits ->
+                if (tx.id != 0L) {
+                    viewModel.handleIntent(DashboardContract.Intent.UpdateTransaction(tx))
+                    viewModel.handleIntent(DashboardContract.Intent.SaveTransactionSplits(tx.id, updatedSplits))
+                } else {
+                    viewModel.handleIntent(DashboardContract.Intent.AddTransaction(tx, updatedSplits))
+                    viewModel.handleIntent(DashboardContract.Intent.UpdateDraftTransaction(null))
+                }
+                activeSplittingTx = null
+            }
+        )
+    }
+
+    if (showRatingDialog) {
+        RatingPromptDialog(
+            onDismissRequest = {
+                coroutineScope.launch {
+                    userPreferences.increaseReviewPromptInterval()
+                    userPreferences.resetAppLaunchCount()
+                }
+                showRatingDialog = false
+            },
+            onDismissIcon = {
+                coroutineScope.launch { userPreferences.setHasPromptedReview(true) }
+                showRatingDialog = false
+            },
+            onRateNow = {
+                coroutineScope.launch { userPreferences.setHasPromptedReview(true) }
+                showRatingDialog = false
+                try {
+                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, "market://details?id=com.masum.cipher".toUri()))
+                } catch (_: android.content.ActivityNotFoundException) {
+                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, "https://play.google.com/store/apps/details?id=com.masum.cipher".toUri()))
+                }
+            },
+            onMaybeLater = {
+                coroutineScope.launch {
+                    userPreferences.increaseReviewPromptInterval()
+                    userPreferences.resetAppLaunchCount()
+                }
+                showRatingDialog = false
+            }
+        )
+    }
+
+    SmartRulePromptDialogs(
+        merchantPrompt = state.promptMerchantRuleFor,
+        categoryPrompt = state.promptCategoryRuleFor,
+        customCategories = state.customCategories,
+        onDismissMerchantPrompt = { viewModel.handleIntent(DashboardContract.Intent.DismissMerchantRulePrompt) },
+        onSaveMerchantRule = { raw, clean -> viewModel.handleIntent(DashboardContract.Intent.SaveMerchantRule(raw, clean)) },
+        onDismissCategoryPrompt = { viewModel.handleIntent(DashboardContract.Intent.DismissCategoryRulePrompt) },
+        onSaveCategoryRule = { merchant, category -> viewModel.handleIntent(DashboardContract.Intent.SaveCategoryRule(merchant, category)) }
+    )
+
+    if (showWhatsNewSheet) {
+        WhatsNewSheet(
+            onDismiss = {
+                coroutineScope.launch {
+                    userPreferences.setLastSeenWhatsNewVersionCode(currentVersionCode)
+                    showWhatsNewSheet = false
+                }
+            },
+            onContinue = {
+                view.performVibrate(isHapticsEnabled, isLongPress = false)
+                coroutineScope.launch {
+                    userPreferences.setLastSeenWhatsNewVersionCode(currentVersionCode)
+                    showWhatsNewSheet = false
+                }
+            },
+            onExplorePro = {
+                view.performVibrate(isHapticsEnabled, isLongPress = false)
+                coroutineScope.launch {
+                    userPreferences.setLastSeenWhatsNewVersionCode(currentVersionCode)
+                    showWhatsNewSheet = false
+                    onNavigateToPro()
+                }
+            },
+            isPro = settings?.isPro == true
+        )
+    }
+
+    if (showComparisonExplanation) {
+        SpendingComparisonSheet(
+            expenseComparisonPercent = state.expenseComparisonPercent,
+            expenseComparisonLabel = state.expenseComparisonLabel,
+            previousPeriodExpenses = state.previousPeriodExpenses,
+            totalExpenses = state.totalExpenses,
+            totalIncome = state.totalIncome,
+            currencySymbol = state.currencySymbol,
+            selectedTimePeriod = state.selectedTimePeriod,
+            isHapticsEnabled = isHapticsEnabled,
+            onDismiss = { showComparisonExplanation = false }
+        )
+    }
+
+    if (showFilterSheet) {
+        DashboardFilterSheet(
+            currentFilter = state.filter,
+            customCategories = state.customCategories,
+            currencySymbol = state.currencySymbol,
+            onApplyFilter = { newFilter ->
+                viewModel.handleIntent(DashboardContract.Intent.SetDashboardFilter(newFilter))
+            },
+            onDismiss = { showFilterSheet = false },
+            isHapticsEnabled = isHapticsEnabled
+        )
+    }
+}
+
+private fun LazyListScope.dashboardTransactionListContent(
+    state: DashboardContract.State,
+    groupedTransactions: Map<String, List<TransactionEntity>>,
+    privacyMode: Boolean,
+    isHapticsEnabled: Boolean,
+    view: android.view.View,
+    shouldShowSkeleton: Boolean,
+    locale: Locale,
+    onSkipSubscription: (com.masum.cipher.core.data.local.entity.SubscriptionEntity) -> Unit,
+    onApproveSubscription: (com.masum.cipher.core.data.local.entity.SubscriptionEntity) -> Unit,
+    onOpenFilterSheet: () -> Unit,
+    onResetFilter: () -> Unit,
+    onTransactionClick: (TransactionEntity) -> Unit
+) {
+    if (state.pendingSubscriptions.isNotEmpty() && state.searchQuery.isEmpty()) {
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 16.dp, bottom = 8.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                    .padding(20.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) {
+                    Icon(
+                        imageVector = LucideIcons.BellRing,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp).padding(end = 8.dp)
+                    )
+                    Text(
+                        text = "Action Needed",
+                        style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+
+                state.pendingSubscriptions.forEach { subscription ->
+                    val amountStr = "${state.currencySymbol}${String.format(locale, "%.0f", subscription.amount)}"
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = subscription.merchant,
+                                style = Typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = "Due for $amountStr",
+                                style = Typography.bodyMedium.copy(fontFamily = Lato, fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(
+                                onClick = { onSkipSubscription(subscription) },
+                                contentPadding = PaddingValues(horizontal = 12.dp)
+                            ) {
+                                Text("Skip", color = MaterialTheme.colorScheme.error)
+                            }
+                            Button(
+                                onClick = { onApproveSubscription(subscription) },
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text("Log", color = MaterialTheme.colorScheme.onError)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (state.filter.isActive) {
+        item(key = "dashboard_filter_active_bar") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                    .clickable { onOpenFilterSheet() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = LucideIcons.SlidersHorizontal,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = buildFilterSummary(state.filter, currencySymbol = state.currencySymbol, locale = locale),
+                        style = Typography.labelMedium.copy(
+                            fontFamily = Lato,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp
+                        ),
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Text(
+                    text = "Reset",
+                    style = Typography.labelSmall.copy(
+                        fontFamily = Lato,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    ),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { onResetFilter() }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+
+    if (state.transactions.isNotEmpty()) {
+        groupedTransactions.entries.forEachIndexed { groupIndex, (monthYear, transactions) ->
+            item(key = "header_$monthYear") {
+                Text(
+                    text = monthYear.uppercase(),
+                    style = Typography.labelSmall.copy(
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.5.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                    modifier = Modifier.padding(start = 24.dp, top = if (groupIndex == 0) 14.dp else 24.dp, bottom = 8.dp)
+                )
+            }
+            itemsIndexed(
+                items = transactions,
+                key = { _, t -> t.id },
+                contentType = { _, _ -> "transaction_item" }
+            ) { index, transaction ->
+                StaggeredEntranceItem(index = index) {
+                    TransactionItem(
+                        transaction = transaction,
+                        customCategories = state.customCategories,
+                        privacyMode = privacyMode,
+                        currencySymbol = state.currencySymbol,
+                        splits = state.splitsByTransactionId[transaction.id] ?: emptyList(),
+                        onClick = { onTransactionClick(transaction) }
+                    )
+                }
+            }
+        }
+    } else if (state.isLoading && shouldShowSkeleton) {
+        item(key = "dashboard_skeleton_loader") {
+            TransactionListSkeleton(
+                count = 6,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    } else if (!state.isLoading) {
+        if (state.searchQuery.isNotEmpty()) {
+            item {
+                SearchEmptyState(query = state.searchQuery)
+            }
+        } else if (state.hasAnyTransactions) {
+            item {
+                FilterEmptyState(period = state.selectedTimePeriod)
+            }
+        } else {
+            item {
+                GenesisEmptyState()
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddTransactionSheetHost(
+    draftTransaction: TransactionEntity?,
+    accounts: List<com.masum.cipher.core.domain.model.AccountItem> = emptyList(),
+    currencyCode: String,
+    customCategories: kotlinx.collections.immutable.ImmutableList<CustomCategoryEntity>,
+    currencySymbol: String,
+    draftSplits: List<SplitParticipant>,
+    isHapticsEnabled: Boolean,
+    onDismiss: () -> Unit,
+    onSaveSplits: (List<SplitParticipant>) -> Unit,
+    onDraftChange: (TransactionEntity?) -> Unit,
+    onConfirm: (TransactionEntity) -> Unit,
+    onConfirmWithSplits: (TransactionEntity, List<SplitParticipant>) -> Unit,
+    onCreateCustomCategory: (String, String, Long) -> Unit,
+    onUpdateCustomCategory: ((Long, String, String, String, Long) -> Unit)? = null,
+    onDeleteCustomCategory: ((CustomCategoryEntity) -> Unit)? = null
+) {
+    TransactionDetailsSheet(
+        transaction = draftTransaction ?: TransactionEntity(
+            amount = 0.0,
+            merchant = "",
+            currency = currencyCode,
+            timestamp = System.currentTimeMillis(),
+            category = "OTHERS",
+            rawSms = null,
+            isIncome = false
+        ),
+        accounts = accounts,
+        customCategories = customCategories,
+        currencySymbol = currencySymbol,
+        existingSplits = draftSplits,
+        onDismiss = onDismiss,
+        onConfirm = onConfirm,
+        onConfirmWithSplits = onConfirmWithSplits,
+        onSaveSplits = onSaveSplits,
+        onDraftChange = onDraftChange,
+        onCreateCustomCategory = onCreateCustomCategory,
+        onUpdateCustomCategory = onUpdateCustomCategory,
+        onDeleteCustomCategory = onDeleteCustomCategory,
+        isHapticsEnabled = isHapticsEnabled
+    )
+}
+
+@Composable
+private fun EditTransactionSheetHost(
+    transaction: TransactionEntity,
+    accounts: List<com.masum.cipher.core.domain.model.AccountItem> = emptyList(),
+    splitsForTransaction: kotlinx.collections.immutable.ImmutableList<com.masum.cipher.core.data.local.entity.TransactionSplitEntity>,
+    draftSplitsForTransaction: List<SplitParticipant>?,
+    customCategories: kotlinx.collections.immutable.ImmutableList<CustomCategoryEntity>,
+    currencySymbol: String,
+    isHapticsEnabled: Boolean,
+    onDismiss: () -> Unit,
+    onSaveSplits: (List<SplitParticipant>) -> Unit,
+    onConfirm: (TransactionEntity) -> Unit,
+    onConfirmWithSplits: (TransactionEntity, List<SplitParticipant>) -> Unit,
+    onDelete: () -> Unit,
+    onCreateCustomCategory: (String, String, Long) -> Unit,
+    onUpdateCustomCategory: ((Long, String, String, String, Long) -> Unit)? = null,
+    onDeleteCustomCategory: ((CustomCategoryEntity) -> Unit)? = null
+) {
+    val mappedParticipants = draftSplitsForTransaction ?: splitsForTransaction.map {
+        SplitParticipant(
+            id = it.id.toString(),
+            name = it.name,
+            amount = it.amount,
+            percentage = if (transaction.amount > 0) (it.amount / transaction.amount) * 100.0 else 0.0,
+            isPaid = it.isPaid,
+            isCurrentUser = it.isCurrentUser
+        )
+    }
+    TransactionDetailsSheet(
+        transaction = transaction,
+        accounts = accounts,
+        customCategories = customCategories,
+        currencySymbol = currencySymbol,
+        existingSplits = mappedParticipants,
+        onDismiss = onDismiss,
+        onConfirm = onConfirm,
+        onConfirmWithSplits = onConfirmWithSplits,
+        onSaveSplits = onSaveSplits,
+        onDelete = onDelete,
+        onCreateCustomCategory = onCreateCustomCategory,
+        onUpdateCustomCategory = onUpdateCustomCategory,
+        onDeleteCustomCategory = onDeleteCustomCategory,
+        isHapticsEnabled = isHapticsEnabled
+    )
+}
+
+@Composable
+private fun RatingPromptDialog(
+    onDismissRequest: () -> Unit,
+    onDismissIcon: () -> Unit,
+    onRateNow: () -> Unit,
+    onMaybeLater: () -> Unit
+) {
+    var animateIn by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        animateIn = true
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismissRequest) {
+        val scale by animateFloatAsState(
+            targetValue = if (animateIn) 1f else 0.8f,
+            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+            label = "rating_scale"
+        )
+        val alpha by animateFloatAsState(
+            targetValue = if (animateIn) 1f else 0f,
+            animationSpec = tween(300),
+            label = "rating_alpha"
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
+                .clip(RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(28.dp)
+                )
+                .padding(24.dp)
+        ) {
+            IconButton(
+                onClick = onDismissIcon,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(32.dp)
+            ) {
+                Icon(
+                    imageVector = LucideIcons.X,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = LucideIcons.Star,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "Enjoying Cipher?",
+                    style = Typography.titleLarge.copy(
+                        fontFamily = DMSans,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    "If Cipher helps you manage your spending, please consider leaving a review on the Play Store. Your support means the world!",
+                    style = Typography.bodyMedium.copy(fontFamily = DMSans),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onRateNow,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(
+                        imageVector = LucideIcons.Star,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Rate on Google Play",
+                        style = Typography.labelLarge.copy(
+                            fontFamily = DMSans,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                TextButton(
+                    onClick = onMaybeLater,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(
+                        "Maybe later",
+                        style = Typography.labelLarge.copy(
+                            fontFamily = DMSans,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmartRulePromptDialogs(
+    merchantPrompt: com.masum.cipher.core.domain.model.MerchantRenameRulePrompt?,
+    categoryPrompt: TransactionEntity?,
+    customCategories: kotlinx.collections.immutable.ImmutableList<CustomCategoryEntity>,
+    onDismissMerchantPrompt: () -> Unit,
+    onSaveMerchantRule: (String, String) -> Unit,
+    onDismissCategoryPrompt: () -> Unit,
+    onSaveCategoryRule: (String, String) -> Unit
+) {
+    merchantPrompt?.let { prompt ->
+        AlertDialog(
+            onDismissRequest = onDismissMerchantPrompt,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.smart_rules_merchant_dialog_title),
+                    style = Typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.smart_rules_merchant_dialog_message, prompt.rawMerchant, prompt.newMerchant),
+                    style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { onSaveMerchantRule(prompt.rawMerchant, prompt.newMerchant) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(stringResource(R.string.smart_rules_dialog_confirm), color = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissMerchantPrompt) {
+                    Text(stringResource(R.string.smart_rules_dialog_dismiss), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    categoryPrompt?.let { tx ->
+        AlertDialog(
+            onDismissRequest = onDismissCategoryPrompt,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.smart_rules_category_dialog_title),
+                    style = Typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                val catItem = CategoryHelper.resolveCategory(tx.category, customCategories)
+                val categoryDisplayName = if (catItem.titleRes != null) stringResource(catItem.titleRes) else catItem.displayName
+                Text(
+                    text = stringResource(R.string.smart_rules_category_dialog_message, tx.merchant, categoryDisplayName),
+                    style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { onSaveCategoryRule(tx.merchant, tx.category) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(stringResource(R.string.smart_rules_dialog_confirm), color = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissCategoryPrompt) {
+                    Text(stringResource(R.string.smart_rules_dialog_dismiss), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SpendingComparisonSheet(
+    expenseComparisonPercent: Double?,
+    expenseComparisonLabel: String?,
+    previousPeriodExpenses: Double?,
+    totalExpenses: Double,
+    totalIncome: Double,
+    currencySymbol: String,
+    selectedTimePeriod: com.masum.cipher.core.domain.model.TimePeriod,
+    isHapticsEnabled: Boolean,
+    onDismiss: () -> Unit
+) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val coroutineScope = rememberCoroutineScope()
+    val comparisonSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = comparisonSheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 4.dp)
+                    .size(width = 36.dp, height = 4.dp)
+                    .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(2.dp))
+            )
+        },
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val percent = expenseComparisonPercent
+                val isLess = (percent ?: 0.0) < 0.0
+                val iconTint = if (percent != null) {
+                    if (isLess) EmeraldIncome else RoseExpense
+                } else MaterialTheme.colorScheme.primary
+
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(iconTint.copy(alpha = 0.12f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isLess) LucideIcons.ArrowDown else LucideIcons.ArrowUp,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = stringResource(R.string.dashboard_spending_trend_title),
+                        style = Typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(selectedTimePeriod.labelRes),
+                        style = Typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            VaultCard(
+                modifier = Modifier.fillMaxWidth(),
+                backgroundColor = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    val percent = expenseComparisonPercent
+                    val prevExp = previousPeriodExpenses
+                    val currentExp = totalExpenses
+                    val label = expenseComparisonLabel ?: stringResource(R.string.period_last_month)
+
+                    if (percent != null && kotlin.math.abs(percent) >= 0.5 && prevExp != null && prevExp > 0) {
+                        val isLess = percent < 0.0
+                        val diff = kotlin.math.abs(currentExp - prevExp)
+                        val color = if (isLess) EmeraldIncome else RoseExpense
+                        val arrow = if (isLess) "▼" else "▲"
+                        val actionWord = if (isLess) stringResource(R.string.less) else stringResource(R.string.more)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dashboard_this_period_so_far),
+                                style = Typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f, fill = false),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = AppFormatters.formatCompactCurrency(currentExp, currencySymbol = currencySymbol),
+                                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dashboard_same_days_prefix, label),
+                                style = Typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f, fill = false),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = AppFormatters.formatCompactCurrency(prevExp, currencySymbol = currencySymbol),
+                                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Spacer(Modifier.height(14.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                        Spacer(Modifier.height(14.dp))
+
+                        val percentStr = if (kotlin.math.abs(percent) > 9999.0) ">999%" else "${String.format(Locale.US, "%.1f", kotlin.math.abs(
+                            percent
+                        ))}%"
+                        Text(
+                            text = "$arrow ${AppFormatters.formatCompactCurrency(diff, currencySymbol = currencySymbol)} $actionWord ($percentStr)",
+                            style = Typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = color,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = if (isLess) {
+                                stringResource(R.string.dashboard_spending_trend_spent_less, label)
+                            } else {
+                                stringResource(R.string.dashboard_spending_trend_spent_more, label)
+                            },
+                            style = Typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dashboard_spending_trend_total_spent),
+                                style = Typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "$currencySymbol${String.format(Locale.US, "%.0f", currentExp)}",
+                                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dashboard_spending_trend_total_income),
+                                style = Typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "$currencySymbol${String.format(Locale.US, "%.0f", totalIncome)}",
+                                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = EmeraldIncome
+                            )
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                        Spacer(Modifier.height(12.dp))
+
+                        val isPastPeriod = selectedTimePeriod == com.masum.cipher.core.domain.model.TimePeriod.LAST_MONTH ||
+                            selectedTimePeriod == com.masum.cipher.core.domain.model.TimePeriod.LAST_WEEK ||
+                            selectedTimePeriod == com.masum.cipher.core.domain.model.TimePeriod.ALL_TIME
+                        Text(
+                            text = if (isPastPeriod) stringResource(R.string.dashboard_spending_trend_period_summary, stringResource(selectedTimePeriod.labelRes)) else stringResource(R.string.dashboard_spending_trend_active_overview),
+                            style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = if (isPastPeriod) {
+                                stringResource(R.string.dashboard_spending_trend_no_prev_data)
+                            } else {
+                                stringResource(R.string.dashboard_spending_trend_no_records)
+                            },
+                            style = Typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = LucideIcons.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = stringResource(R.string.dashboard_spending_trend_footer),
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = {
+                    view.performVibrate(isHapticsEnabled)
+                    coroutineScope.launch {
+                        comparisonSheetState.hide()
+                    }.invokeOnCompletion {
+                        if (!comparisonSheetState.isVisible) {
+                            onDismiss()
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Got it", style = Typography.titleMedium, color = MaterialTheme.colorScheme.onPrimary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardHero(
+    totalBalance: Double,
+    income: Double,
+    expense: Double,
+    currencySymbol: String = "₹",
+    selectedPeriod: com.masum.cipher.core.domain.model.TimePeriod,
+    selectedTimeRange: com.masum.cipher.core.domain.model.TimeRange? = null,
+    transactions: kotlinx.collections.immutable.ImmutableList<TransactionEntity>,
+    onPeriodSelected: (com.masum.cipher.core.domain.model.TimePeriod, Long?, Long?) -> Unit,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    filter: DashboardFilter = DashboardFilter(),
+    onOpenFilter: () -> Unit = {},
+    privacyMode: Boolean,
+    isHapticsEnabled: Boolean,
+    isPro: Boolean = false,
+    expenseComparisonPercent: Double? = null,
+    onComparisonBadgeClick: () -> Unit = {},
+    onAdjustBalanceClick: () -> Unit = {},
+    toolbarOffsetHeightPx: Float = 0f,
+    toolbarHeightRangePx: Float = 1f,
+    maxToolbarHeight: androidx.compose.ui.unit.Dp = 260.dp
+) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val locale = LocalLocale.current.platformLocale
+    val scrollProgress = if (toolbarHeightRangePx > 0f) {
+        1f - (kotlin.math.abs(toolbarOffsetHeightPx) / toolbarHeightRangePx)
+    } else 1f
+
+    val searchHeroHeight by animateDpAsState(
+        targetValue = if (searchQuery.isNotEmpty()) 80.dp else maxToolbarHeight,
+        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+        label = "SearchHeroHeight"
+    )
+    val heroHeight = if (searchQuery.isNotEmpty()) searchHeroHeight else (maxToolbarHeight + with(LocalDensity.current) { toolbarOffsetHeightPx.toDp() })
+
+    val contentAlpha by animateFloatAsState(
+        targetValue = if (searchQuery.isEmpty()) 1f else 0f,
+        animationSpec = tween(durationMillis = if (searchQuery.isEmpty()) 300 else 150, easing = FastOutSlowInEasing),
+        label = "ContentAlpha"
+    )
+
+    val balanceScale = 0.6f + (0.4f * scrollProgress)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            )
+            .statusBarsPadding()
+            .height(heroHeight)
+    ) {
+        if (searchQuery.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 70.dp, start = 24.dp, end = 24.dp)
+                    .graphicsLayer { alpha = contentAlpha }
+            ) {
+                androidx.compose.ui.layout.Layout(
+                    content = {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer {
+                                    alpha = ((scrollProgress - 0.4f) / 0.6f).coerceIn(0f, 1f)
+                                },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dashboard_period_balance, stringResource(selectedPeriod.labelRes)),
+                                style = Typography.labelMedium.copy(
+                                    fontFamily = DMSans,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.2.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            if (expenseComparisonPercent != null && kotlin.math.abs(expenseComparisonPercent) >= 0.5) {
+                                val isLess = expenseComparisonPercent < 0.0
+                                val compColor = if (isLess) EmeraldIncome else RoseExpense
+                                val arrow = if (isLess) "▼" else "▲"
+                                val percentStr = if (kotlin.math.abs(expenseComparisonPercent) > 999.0) ">999%" else "${String.format(locale, "%.0f", kotlin.math.abs(expenseComparisonPercent))}%"
+
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(compColor.copy(alpha = 0.12f))
+                                        .border(0.8.dp, compColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                            onComparisonBadgeClick()
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Text(
+                                        text = "$arrow $percentStr",
+                                        style = Typography.labelSmall.copy(
+                                            fontFamily = Lato,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.5.sp
+                                        ),
+                                        color = compColor
+                                    )
+                                }
+                            }
+                        }
+
+                        val formattedBalance = remember(totalBalance, currencySymbol, locale) {
+                            AppFormatters.formatCompactCurrency(totalBalance, currencySymbol, locale)
+                        }
+
+                        val balanceFontSize = remember(formattedBalance.length) {
+                            when {
+                                formattedBalance.length > 14 -> 28.sp
+                                formattedBalance.length > 10 -> 36.sp
+                                formattedBalance.length > 8 -> 44.sp
+                                else -> 52.sp
+                            }
+                        }
+
+                        val isSuffix = AppFormatters.isSuffixCurrency(currencySymbol, locale)
+                        Row(
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = balanceScale
+                                scaleY = balanceScale
+                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                            }
+                        ) {
+                            if (privacyMode) {
+                                Text(
+                                    text = if (isSuffix) "•••••• $currencySymbol" else "$currencySymbol••••••",
+                                    style = Typography.displayLarge.copy(
+                                        fontFamily = Lato,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = balanceFontSize,
+                                        letterSpacing = (-0.5).sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            } else {
+                                val isHugeAmount = kotlin.math.abs(totalBalance) >= 100_000
+
+                                if (isHugeAmount) {
+                                    AnimatedContent(
+                                        targetState = formattedBalance,
+                                        transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
+                                        label = "huge_balance_fade"
+                                    ) { targetText ->
+                                        Text(
+                                            text = targetText,
+                                            style = Typography.displayLarge.copy(
+                                                fontFamily = Lato,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = balanceFontSize,
+                                                letterSpacing = (-0.5).sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                } else {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (!isSuffix) {
+                                            Text(
+                                                text = currencySymbol,
+                                                style = Typography.headlineMedium.copy(
+                                                    fontFamily = Lato,
+                                                    fontWeight = FontWeight.SemiBold
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(end = 2.dp)
+                                            )
+                                        }
+                                        if (totalBalance < 0) {
+                                            Text(
+                                                text = "-",
+                                                style = Typography.displayLarge.copy(
+                                                    fontFamily = Lato,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = balanceFontSize,
+                                                    letterSpacing = (-0.5).sp
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        AnimatedNumberTicker(
+                                            value = kotlin.math.abs(totalBalance),
+                                            textStyle = Typography.displayLarge.copy(
+                                                fontFamily = Lato,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = balanceFontSize,
+                                                letterSpacing = (-0.5).sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        if (isSuffix) {
+                                            Text(
+                                                text = currencySymbol,
+                                                style = Typography.headlineMedium.copy(
+                                                    fontFamily = Lato,
+                                                    fontWeight = FontWeight.SemiBold
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(start = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            val pencilAlpha = ((scrollProgress - 0.45f) / 0.55f).coerceIn(0f, 1f)
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .graphicsLayer {
+                                        alpha = pencilAlpha
+                                    }
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        enabled = pencilAlpha > 0.05f
+                                    ) {
+                                        view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                        onAdjustBalanceClick()
+                                    },
+                                contentAlignment = Alignment.BottomCenter
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(bottom = 6.dp)
+                                        .size(26.dp)
+                                        .graphicsLayer {
+                                            scaleX = pencilAlpha
+                                            scaleY = pencilAlpha
+                                        }
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .border(
+                                            width = 1.dp,
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = LucideIcons.Pencil,
+                                        contentDescription = stringResource(R.string.adjust_balance_title),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
+                        
+                        val exitAlpha = ((scrollProgress - 0.35f) / 0.65f).coerceIn(0f, 1f)
+                        val exitProgress = exitAlpha * exitAlpha * (3f - 2f * exitAlpha)
+
+                        val enterAlpha = ((0.65f - scrollProgress) / 0.65f).coerceIn(0f, 1f)
+                        val enterProgress = enterAlpha * enterAlpha * (3f - 2f * enterAlpha)
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer {
+                                    alpha = exitProgress
+                                    translationX = -(1f - exitProgress) * 70.dp.toPx()
+                                }
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    RoundedCornerShape(20.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                .padding(vertical = 12.dp, horizontal = 16.dp)
+                        ) {
+                            CashFlowSegmentBar(
+                                income = income,
+                                expense = expense,
+                                currencySymbol = currencySymbol,
+                                privacyMode = privacyMode,
+                                isCollapsed = false
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    alpha = enterProgress
+                                    translationX = (1f - enterProgress) * 70.dp.toPx()
+                                }
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    RoundedCornerShape(16.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .padding(vertical = 7.dp, horizontal = 12.dp)
+                        ) {
+                            CashFlowSegmentBar(
+                                income = income,
+                                expense = expense,
+                                currencySymbol = currencySymbol,
+                                privacyMode = privacyMode,
+                                isCollapsed = true
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                ) { measurables, constraints ->
+                    val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+                    val headerConstraints = looseConstraints.copy(minWidth = constraints.maxWidth, maxWidth = constraints.maxWidth)
+                    val periodLabelPlaceable = measurables[0].measure(headerConstraints)
+                    val balancePlaceable = measurables[1].measure(looseConstraints)
+                    val expandedStatsPlaceable = measurables[2].measure(looseConstraints.copy(minWidth = constraints.maxWidth, maxWidth = constraints.maxWidth))
+                    
+                    val balanceVisualCollapsedWidth = (balancePlaceable.width * 0.62f).toInt()
+                    val gapBetween = 16.dp.roundToPx()
+                    val maxSafeCollapsedWidth = (constraints.maxWidth - balanceVisualCollapsedWidth - gapBetween).coerceAtLeast(100)
+                    val collapsedStatsConstraints = looseConstraints.copy(
+                        minWidth = (maxSafeCollapsedWidth * 0.85f).toInt(),
+                        maxWidth = maxSafeCollapsedWidth
+                    )
+                    val collapsedStatsPlaceable = measurables[3].measure(collapsedStatsConstraints)
+
+                    val progress = scrollProgress.coerceIn(0f, 1f)
+
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        val periodLabelY = 10.dp.roundToPx()
+                        if (progress > 0.4f) {
+                            periodLabelPlaceable.placeRelative(0, periodLabelY)
+                        }
+
+                        val expBalanceX = (constraints.maxWidth - balancePlaceable.width) / 2f
+                        val colBalanceX = 0f
+                        val currentBalanceX = colBalanceX + (expBalanceX - colBalanceX) * progress
+
+                        val expBalanceY = (periodLabelY + periodLabelPlaceable.height + 14.dp.roundToPx()).toFloat()
+                        val colBalanceY = (constraints.maxHeight - balancePlaceable.height) / 2f
+                        val currentBalanceY = colBalanceY + (expBalanceY - colBalanceY) * progress
+
+                        balancePlaceable.placeRelative(currentBalanceX.toInt(), currentBalanceY.toInt())
+
+                        val balanceVisualHeight = balancePlaceable.height * balanceScale
+                        val balanceBottom = expBalanceY + balanceVisualHeight
+                        val remainingSpace = constraints.maxHeight - balanceBottom
+                        val maxAllowedExpStatsY = (constraints.maxHeight - expandedStatsPlaceable.height).toFloat().coerceAtLeast(0f)
+                        val expStatsY = (balanceBottom + (remainingSpace - expandedStatsPlaceable.height) / 2f).coerceIn(0f, maxAllowedExpStatsY)
+
+                        val exitAlpha = ((scrollProgress - 0.35f) / 0.65f).coerceIn(0f, 1f)
+                        if (exitAlpha > 0.01f) {
+                            expandedStatsPlaceable.placeRelative(0, expStatsY.toInt())
+                        }
+
+                        val enterAlpha = ((0.65f - scrollProgress) / 0.65f).coerceIn(0f, 1f)
+                        if (enterAlpha > 0.01f) {
+                            val colStatsX = (constraints.maxWidth - collapsedStatsPlaceable.width)
+                            val colStatsY = (constraints.maxHeight - collapsedStatsPlaceable.height) / 2f
+                            collapsedStatsPlaceable.placeRelative(colStatsX, colStatsY.toInt())
+                        }
+                    }
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .align(Alignment.TopCenter)
+                .heightIn(min = 48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "cipher.",
+                        style = Typography.titleLarge.copy(
+                            fontFamily = DMSans,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                    if (isPro) {
+                        val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                        val badgeAccentColor = if (isDarkTheme) Color(0xFFFBBF24) else Color(0xFFB45309)
+                        val badgeBgColor = if (isDarkTheme) Color(0xFFF59E0B).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.12f)
+                        val badgeBorderColor = if (isDarkTheme) Color(0xFFF59E0B).copy(alpha = 0.35f) else Color(0xFFD97706).copy(alpha = 0.32f)
+
+                        Box(
+                            modifier = Modifier
+                                .padding(bottom = 3.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(badgeBgColor)
+                                .border(0.75.dp, badgeBorderColor, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 5.dp, vertical = 2.5.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = LucideIcons.Crown,
+                                    contentDescription = "Cipher Pro Active",
+                                    tint = badgeAccentColor,
+                                    modifier = Modifier.size(9.5.dp)
+                                )
+                                Text(
+                                    text = "PRO",
+                                    style = Typography.labelSmall.copy(
+                                        fontFamily = Lato,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 8.5.sp,
+                                        letterSpacing = 0.6.sp
+                                    ),
+                                    color = badgeAccentColor
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    var textFieldValue by remember { 
+                        mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(searchQuery)) 
+                    }
+                    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
+                    LaunchedEffect(searchQuery) {
+                        if (searchQuery.isEmpty() && textFieldValue.text.isNotEmpty()) {
+                            textFieldValue = androidx.compose.ui.text.input.TextFieldValue("")
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .widthIn(min = 105.dp, max = 130.dp)
+                            .height(38.dp)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), RoundedCornerShape(19.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(19.dp))
+                            .padding(horizontal = 10.dp)
+                    ) {
+                        Icon(
+                            imageVector = LucideIcons.Search,
+                            contentDescription = stringResource(R.string.action_search),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = textFieldValue,
+                            onValueChange = { newValue ->
+                                textFieldValue = newValue
+                                onSearchQueryChanged(newValue.text)
+                            },
+                            modifier = Modifier.weight(1f),
+                            textStyle = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                            decorationBox = { innerTextField ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (textFieldValue.text.isEmpty()) {
+                                        Text(
+                                            text = stringResource(R.string.action_search),
+                                            style = Typography.bodyMedium.copy(fontSize = 13.sp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        
+                        if (textFieldValue.text.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            IconButton(onClick = { 
+                                textFieldValue = androidx.compose.ui.text.input.TextFieldValue("")
+                                onSearchQueryChanged("") 
+                                focusManager.clearFocus()
+                            }, modifier = Modifier.size(18.dp)) {
+                                Icon(
+                                    imageVector = LucideIcons.X,
+                                    contentDescription = stringResource(R.string.action_close),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier.size(38.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(
+                                    if (filter.isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (filter.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    shape = CircleShape
+                                )
+                                .clickable {
+                                    view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                    onOpenFilter()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = LucideIcons.SlidersHorizontal,
+                                contentDescription = stringResource(R.string.filter_title),
+                                tint = if (filter.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+
+                        if (filter.isActive) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 1.dp, end = 1.dp)
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary)
+                                    .border(1.5.dp, MaterialTheme.colorScheme.background, CircleShape)
+                            )
+                        }
+                    }
+
+                    TimeSelectorDropdown(
+                        selectedPeriod = selectedPeriod,
+                        selectedTimeRange = selectedTimeRange,
+                        onPeriodSelected = onPeriodSelected,
+                        isHapticsEnabled = isHapticsEnabled,
+                        iconOnly = true
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun buildFilterSummary(
+    filter: DashboardFilter,
+    currencySymbol: String = "₹",
+    locale: Locale = Locale.getDefault()
+): String {
+    val parts = mutableListOf<String>()
+    when (filter.type) {
+        DashboardContract.FilterType.EXPENSE -> parts.add("Expenses")
+        DashboardContract.FilterType.INCOME -> parts.add("Income")
+        DashboardContract.FilterType.ALL -> {}
+    }
+    if (filter.selectedCategories.isNotEmpty()) {
+        if (filter.selectedCategories.size == 1) {
+            parts.add(filter.selectedCategories.first())
+        } else {
+            parts.add("${filter.selectedCategories.size} Categories")
+        }
+    }
+    if (filter.minAmount != null && filter.maxAmount != null) {
+        parts.add("${AppFormatters.formatCurrency(filter.minAmount, currencySymbol, locale, decimals = 0)} – ${AppFormatters.formatCurrency(
+            filter.maxAmount, currencySymbol, locale, decimals = 0)}")
+    } else if (filter.minAmount != null) {
+        parts.add("> ${AppFormatters.formatCurrency(filter.minAmount, currencySymbol, locale, decimals = 0)}")
+    } else if (filter.maxAmount != null) {
+        parts.add("< ${AppFormatters.formatCurrency(filter.maxAmount, currencySymbol, locale, decimals = 0)}")
+    }
+    return parts.joinToString(" • ")
+}
+
+
+
+
+@Composable
+fun TransactionItem(
+    transaction: TransactionEntity,
+    customCategories: List<CustomCategoryEntity> = emptyList(),
+    privacyMode: Boolean,
+    currencySymbol: String = "₹",
+    splits: List<com.masum.cipher.core.data.local.entity.TransactionSplitEntity> = emptyList(),
+    modifier: Modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+    onClick: () -> Unit
+) {
+    val locale = LocalLocale.current.platformLocale
+    VaultCard(
+        modifier = modifier,
+        onClick = onClick,
+        contentPadding = 12.dp,
+        backgroundColor = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+
+            val category = remember(transaction.category, customCategories) {
+                CategoryHelper.resolveCategory(transaction.category, customCategories)
+            }
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(category.color.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = category.icon,
+                    contentDescription = null,
+                    tint = category.color,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = transaction.merchant,
+                        style = Typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (splits.size > 1) {
+                        val otherSplits = splits.filter { !it.isCurrentUser }
+                        val pendingCount = otherSplits.count { !it.isPaid }
+                        val allSettled = pendingCount == 0
+
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(
+                                    if (allSettled) EmeraldIncome.copy(alpha = 0.12f)
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                )
+                                .border(
+                                    width = 0.5.dp,
+                                    color = if (allSettled) EmeraldIncome.copy(alpha = 0.3f)
+                                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                .padding(horizontal = 5.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                imageVector = LucideIcons.Users,
+                                contentDescription = null,
+                                tint = if (allSettled) EmeraldIncome else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Text(
+                                text = if (allSettled) "${splits.size}" else "$pendingCount/${otherSplits.size}",
+                                style = Typography.labelSmall.copy(
+                                    fontFamily = Lato,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp
+                                ),
+                                color = if (allSettled) EmeraldIncome else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                Text(
+                    text = AppFormatters.formatDateTime(transaction.timestamp, locale = locale),
+                    style = Typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!transaction.note.isNullOrBlank()) {
+                    Text(
+                        text = "\"${transaction.note}\"",
+                        style = Typography.bodySmall.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+
+            val myShare = if (splits.size > 1) {
+                splits.find { it.isCurrentUser }?.amount ?: (transaction.amount / splits.size)
+            } else null
+
+            val amountFormatted = AppFormatters.formatCurrency(transaction.amount, currencySymbol, locale, decimals = 0)
+            val signedAmount = if (transaction.isIncome) "+$amountFormatted" else "-$amountFormatted"
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Text(
+                    text = if (privacyMode) "•••" else signedAmount,
+                    style = Typography.titleMedium.copy(
+                        fontFamily = Lato,
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = if (transaction.isIncome) EmeraldIncome else RoseExpense,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (myShare != null) {
+                    val shareFormatted = AppFormatters.formatCurrency(myShare, currencySymbol, locale, decimals = 0)
+                    Text(
+                        text = if (privacyMode) "•••" else "My: -$shareFormatted",
+                        style = Typography.labelSmall.copy(
+                            fontFamily = Lato,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenesisEmptyState() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        VaultCard(
+            modifier = Modifier.fillMaxWidth(),
+            backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(MaterialTheme.colorScheme.surface, CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        LucideIcons.BellRing,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text(
+                    text = "Listening for payments",
+                    style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text(
+                    text = "Go ahead, make a digital payment. Cipher will catch the notification and log it here instantly.",
+                    style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(
+            text = "Tap + below to add a past transaction manually",
+            style = Typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun SearchEmptyState(query: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            LucideIcons.Search,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.outline
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "${stringResource(R.string.no_transactions_found)}: '$query'",
+            style = Typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun FilterEmptyState(period: com.masum.cipher.core.domain.model.TimePeriod) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            LucideIcons.Calendar,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.outline
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+        Text(
+            text = "${stringResource(R.string.no_transactions_found)}: ${AppFormatters.getPeriodLabel(period, emptyList(), context = context, locale = locale)}",
+            style = Typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.no_spending_desc),
+            style = Typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun CashFlowSegmentBar(
+    income: Double,
+    expense: Double,
+    currencySymbol: String = "₹",
+    privacyMode: Boolean,
+    isCollapsed: Boolean
+) {
+    val locale = LocalLocale.current.platformLocale
+    val total = income + expense
+    val incomeFraction = if (total > 0) (income / total).toFloat() else 0.5f
+    
+    val animatedIncomeRatio by animateFloatAsState(
+        targetValue = incomeFraction,
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 150f),
+        label = "incomeRatio"
+    )
+    val barHeight = if (isCollapsed) 4.dp else 8.dp
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = if (isCollapsed) 5.dp else 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(if (isCollapsed) 17.dp else 18.dp)
+                        .background(EmeraldIncome.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = LucideIcons.ArrowDown,
+                        contentDescription = null,
+                        tint = EmeraldIncome,
+                        modifier = Modifier.size(if (isCollapsed) 11.5.dp else 12.dp)
+                    )
+                }
+                
+                if (!isCollapsed) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.income).uppercase(),
+                        style = Typography.labelSmall.copy(
+                            fontFamily = Lato,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.8.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+                
+                Spacer(Modifier.width(if (isCollapsed) 4.dp else 6.dp))
+                val formattedIncome = AppFormatters.formatCompactCurrency(income, currencySymbol, locale)
+                AnimatedContent(
+                    targetState = if (privacyMode) "••••" else formattedIncome,
+                    transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
+                    label = "income_fade"
+                ) { targetText ->
+                    Text(
+                        text = targetText,
+                        style = Typography.titleMedium.copy(
+                            fontFamily = Lato,
+                            fontSize = if (isCollapsed) 14.sp else 15.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.2).sp
+                        ),
+                        color = EmeraldIncome,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                val formattedExpense = AppFormatters.formatCompactCurrency(expense, currencySymbol, locale)
+                AnimatedContent(
+                    targetState = if (privacyMode) "••••" else formattedExpense,
+                    transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
+                    label = "expense_fade"
+                ) { targetText ->
+                    Text(
+                        text = targetText,
+                        style = Typography.titleMedium.copy(
+                            fontFamily = Lato,
+                            fontSize = if (isCollapsed) 14.sp else 15.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.2).sp
+                        ),
+                        color = RoseExpense,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                
+                if (!isCollapsed) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.expense).uppercase(),
+                        style = Typography.labelSmall.copy(
+                            fontFamily = Lato,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.8.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+                
+                Spacer(Modifier.width(if (isCollapsed) 4.dp else 6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(if (isCollapsed) 17.dp else 18.dp)
+                        .background(RoseExpense.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = LucideIcons.ArrowUp,
+                        contentDescription = null,
+                        tint = RoseExpense,
+                        modifier = Modifier.size(if (isCollapsed) 11.5.dp else 12.dp)
+                    )
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(barHeight)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+        ) {
+            if (total > 0) {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(animatedIncomeRatio.coerceAtLeast(0.01f))
+                            .clip(CircleShape)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(EmeraldIncome.copy(alpha = 0.7f), EmeraldIncome)
+                                )
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight((1f - animatedIncomeRatio).coerceAtLeast(0.01f))
+                            .clip(CircleShape)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(RoseExpense, RoseExpense.copy(alpha = 0.7f))
+                                )
+                            )
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                )
+            }
+        }
+    }
+}

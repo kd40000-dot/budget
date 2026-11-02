@@ -1,0 +1,190 @@
+package com.masum.cipher.core.domain.usecase
+
+import android.net.Uri
+import com.masum.cipher.core.data.local.AppDatabase
+import com.masum.cipher.core.data.local.dao.AccountDao
+import com.masum.cipher.core.data.local.dao.TransactionDao
+import com.masum.cipher.core.data.local.entity.AccountEntity
+import com.masum.cipher.core.data.local.pref.AppTheme
+import com.masum.cipher.core.data.local.pref.UserPreferences
+import com.masum.cipher.core.data.repository.BackupRepository
+import com.masum.cipher.core.util.AppFormatters
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+
+class UpdateSettingsUseCase @Inject constructor(
+    private val userPreferences: UserPreferences,
+    private val transactionRepository: com.masum.cipher.core.data.repository.TransactionRepository
+) {
+    suspend fun theme(theme: AppTheme) {
+        userPreferences.setTheme(theme)
+        transactionRepository.refreshWidgets()
+    }
+    suspend fun accentColor(color: com.masum.cipher.core.data.local.pref.AccentColor) {
+        userPreferences.setAccentColor(color)
+        transactionRepository.refreshWidgets()
+    }
+    suspend fun biometric(enabled: Boolean) = userPreferences.setBiometricEnabled(enabled)
+    suspend fun privacyMode(enabled: Boolean) = userPreferences.setPrivacyModeEnabled(enabled)
+    suspend fun haptics(enabled: Boolean) = userPreferences.setHapticsEnabled(enabled)
+    suspend fun autoLockTimeout(timeout: Long) = userPreferences.setAutoLockTimeout(timeout)
+    suspend fun monthlyBudget(amount: Double) {
+        userPreferences.setMonthlyBudget(amount)
+        transactionRepository.refreshWidgets()
+    }
+    suspend fun dynamicBudget(enabled: Boolean) {
+        userPreferences.setDynamicBudgetEnabled(enabled)
+        transactionRepository.refreshWidgets()
+    }
+    suspend fun budgetAccountId(accountId: Long?) {
+        userPreferences.setBudgetAccountId(accountId)
+        transactionRepository.refreshWidgets()
+    }
+
+    suspend fun autoBackupEnabled(enabled: Boolean) = userPreferences.setAutoBackupEnabled(enabled)
+    suspend fun autoBackupFrequency(frequency: com.masum.cipher.core.data.local.pref.AutoBackupFrequency) = userPreferences.setAutoBackupFrequency(frequency)
+    suspend fun autoBackupUri(uri: String?) = userPreferences.setAutoBackupUri(uri)
+    suspend fun autoBackupEncryptedPassword(password: String?) = userPreferences.setAutoBackupEncryptedPassword(password)
+}
+
+class ClearAllDataUseCase @Inject constructor(
+    private val appDatabase: AppDatabase,
+    private val widgetSyncManager: WidgetSyncManager
+) {
+    suspend operator fun invoke() = withContext(Dispatchers.IO) {
+        appDatabase.clearAllTables()
+        appDatabase.accountDao().insertAccount(
+            AccountEntity(
+                id = 1L,
+                name = "Main Account",
+                type = "BANK",
+                initialBalance = 0.0,
+                colorHex = 0xFF4F46E5L,
+                iconName = "Landmark",
+                isDefault = true,
+                createdAt = System.currentTimeMillis()
+            )
+        )
+        widgetSyncManager.syncWidget()
+    }
+}
+
+class ExportCsvUseCase @Inject constructor(
+    private val transactionDao: TransactionDao,
+    private val transactionSplitDao: com.masum.cipher.core.data.local.dao.TransactionSplitDao,
+    private val accountDao: AccountDao,
+    private val userPreferences: UserPreferences,
+    private val backupRepository: BackupRepository
+) {
+    suspend operator fun invoke(uri: Uri, accountId: Long? = null): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val allTransactions = transactionDao.getAllTransactions().first()
+            val targetAccount = if (accountId != null) accountDao.getAccountById(accountId) else null
+            val isTargetDefault = targetAccount?.isDefault ?: false
+            val transactions = if (accountId != null) {
+                allTransactions.filter { it.accountId == accountId || (it.accountId == null && isTargetDefault) }
+            } else {
+                allTransactions
+            }
+            val allSplits = transactionSplitDao.getAllSplits()
+            val splitsByTx = allSplits.groupBy { it.transactionId }
+            val currencyCode = userPreferences.getCachedCurrencyCode()
+            val currencySymbol = userPreferences.getCachedCurrencySymbol()
+
+            val csvHeader = "ID,Date,Merchant,Amount,Currency,Category,Type,IsSplit,MyShare,SplitDetails,Note\n"
+            val csvData = transactions.joinToString("\n") { tx ->
+                val date = AppFormatters.formatFullDate(tx.timestamp)
+                val type = if (tx.isIncome) "Income" else "Expense"
+                val noteStr = tx.note?.replace("\"", "\"\"") ?: ""
+                val splits = splitsByTx[tx.id]
+                val hasSplits = splits != null && splits.size > 1
+                val isSplit = if (hasSplits) "Yes" else "No"
+                val myShare = if (splits != null && splits.size > 1) {
+                    splits.find { it.isCurrentUser }?.amount ?: tx.amount
+                } else {
+                    tx.amount
+                }
+                val splitDetailsStr = if (splits != null && splits.size > 1) {
+                    splits.joinToString(" | ") { split ->
+                        val status = if (split.isCurrentUser || split.isPaid) "Settled" else "Pending"
+                        "${split.name}: $currencySymbol${String.format(java.util.Locale.US, "%.2f", split.amount)} ($status)"
+                    }.replace("\"", "\"\"")
+                } else {
+                    ""
+                }
+                "${tx.id},\"$date\",\"${tx.merchant.replace("\"", "\"\"")}\",${tx.amount},\"$currencyCode\",\"${tx.category}\",\"$type\",\"$isSplit\",$myShare,\"$splitDetailsStr\",\"$noteStr\""
+            }
+            
+            backupRepository.provideOutputStream(uri)?.use { outputStream ->
+                outputStream.write((csvHeader + csvData).toByteArray())
+            } ?: throw Exception("Could not open file for writing")
+        }
+    }
+}
+
+class ExportPdfUseCase @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
+    private val transactionDao: TransactionDao,
+    private val transactionSplitDao: com.masum.cipher.core.data.local.dao.TransactionSplitDao,
+    private val accountDao: AccountDao,
+    private val backupRepository: BackupRepository,
+    private val userPreferences: UserPreferences,
+    private val appIntegrityValidator: com.masum.cipher.core.security.AppIntegrityValidator
+) {
+    suspend operator fun invoke(uri: Uri, accountId: Long? = null, accountName: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (!appIntegrityValidator.isEnvironmentValid() || !userPreferences.isCachedPro()) {
+                throw IllegalStateException("PDF statement export is a Pro feature")
+            }
+            val allTransactions = transactionDao.getAllTransactions().first()
+            val targetAccount = if (accountId != null) accountDao.getAccountById(accountId) else null
+            val isTargetDefault = targetAccount?.isDefault ?: false
+            val transactions = if (accountId != null) {
+                allTransactions.filter { it.accountId == accountId || (it.accountId == null && isTargetDefault) }
+            } else {
+                allTransactions
+            }
+            val allSplits = transactionSplitDao.getAllSplits()
+            val splitsByTx = allSplits.groupBy { it.transactionId }
+            val currencySymbol = userPreferences.getCachedCurrencySymbol()
+            
+            backupRepository.provideOutputStream(uri)?.use { outputStream ->
+                com.masum.cipher.core.util.PdfGenerator.generateStatement(
+                    context = context,
+                    transactions = transactions,
+                    outputStream = outputStream,
+                    currencySymbol = currencySymbol,
+                    splitsMap = splitsByTx,
+                    accountName = accountName ?: targetAccount?.name
+                )
+            } ?: throw Exception("Could not open file for writing")
+        }
+    }
+}
+
+class ExportDataUseCase @Inject constructor(
+    private val backupRepository: BackupRepository
+) {
+    suspend operator fun invoke(uri: Uri, password: CharArray): Result<Unit> = withContext(Dispatchers.IO) {
+        val outputStream = backupRepository.provideOutputStream(uri)
+            ?: return@withContext Result.failure(Exception("Could not open file for writing"))
+        
+        backupRepository.exportData(outputStream, password)
+    }
+}
+
+class ImportDataUseCase @Inject constructor(
+    private val backupRepository: BackupRepository,
+    private val pendingLicenseActivator: com.masum.cipher.core.security.PendingLicenseActivator
+) {
+    suspend operator fun invoke(uri: Uri, password: CharArray, clearExisting: Boolean = false): Result<Unit> = withContext(Dispatchers.IO) {
+        val inputStream = backupRepository.provideInputStream(uri)
+            ?: return@withContext Result.failure(Exception("Could not open file for reading"))
+        
+        backupRepository.restoreData(inputStream, password, clearExisting).also { result ->
+            if (result.isSuccess) pendingLicenseActivator.activate()
+        }
+    }
+}

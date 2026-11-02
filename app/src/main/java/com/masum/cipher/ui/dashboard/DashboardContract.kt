@@ -1,0 +1,99 @@
+package com.masum.cipher.ui.dashboard
+
+import androidx.compose.runtime.Immutable
+import com.masum.cipher.core.data.local.entity.TransactionEntity
+import com.masum.cipher.core.domain.model.MerchantRenameRulePrompt
+import com.masum.cipher.core.mvi.UiEffect
+import com.masum.cipher.core.mvi.UiIntent
+import com.masum.cipher.core.mvi.UiState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
+
+class DashboardContract {
+
+    sealed class Intent : UiIntent {
+        object LoadDashboard : Intent()
+        data class DeleteTransaction(val transaction: TransactionEntity) : Intent()
+        data class UpdateTransaction(val transaction: TransactionEntity) : Intent()
+        data class RestoreTransaction(val transaction: TransactionEntity, val splits: List<com.masum.cipher.core.data.local.entity.TransactionSplitEntity> = emptyList()) : Intent()
+        data class AddTransaction(val transaction: TransactionEntity, val splits: List<com.masum.cipher.core.domain.model.SplitParticipant> = emptyList()) : Intent()
+        data class SearchTransactions(val query: String) : Intent()
+        data class FilterTransactions(val filter: FilterType) : Intent()
+        data class SetDashboardFilter(val filter: DashboardFilter) : Intent()
+        object ResetDashboardFilter : Intent()
+        data class SetTimePeriod(val period: com.masum.cipher.core.domain.model.TimePeriod, val customStart: Long? = null, val customEnd: Long? = null) : Intent()
+        data class UpdateDraftTransaction(val transaction: TransactionEntity?) : Intent()
+        data class SaveCategoryRule(val merchantName: String, val category: String) : Intent()
+        object DismissCategoryRulePrompt : Intent()
+        data class SaveMerchantRule(val rawName: String, val cleanName: String) : Intent()
+        object DismissMerchantRulePrompt : Intent()
+        data class ApproveSubscription(val subscription: com.masum.cipher.core.data.local.entity.SubscriptionEntity) : Intent()
+        data class SkipSubscription(val subscription: com.masum.cipher.core.data.local.entity.SubscriptionEntity) : Intent()
+        data class UpdateMonthlyBudget(val budget: Double, val isDynamic: Boolean = false) : Intent()
+        data class SaveTransactionSplits(val transactionId: Long, val splits: List<com.masum.cipher.core.domain.model.SplitParticipant>) : Intent()
+        data class UpdateSplitPaidStatus(val splitId: Long, val isPaid: Boolean) : Intent()
+        data class CreateCustomCategory(val name: String, val iconName: String, val colorHex: Long) : Intent()
+        data class UpdateCustomCategory(val id: Long, val oldName: String, val newName: String, val iconName: String, val colorHex: Long) : Intent()
+        data class DeleteCustomCategory(val category: com.masum.cipher.core.data.local.entity.CustomCategoryEntity) : Intent()
+    }
+
+    enum class FilterType { ALL, INCOME, EXPENSE }
+
+    @Immutable
+    data class State(
+        val isLoading: Boolean = true,
+        val transactions: ImmutableList<TransactionEntity> = persistentListOf(),
+        val pendingSubscriptions: ImmutableList<com.masum.cipher.core.data.local.entity.SubscriptionEntity> = persistentListOf(),
+        val hasAnyTransactions: Boolean = false,
+        val searchQuery: String = "",
+        val activeFilter: FilterType = FilterType.ALL,
+        val filter: DashboardFilter = DashboardFilter(),
+        val selectedTimePeriod: com.masum.cipher.core.domain.model.TimePeriod = com.masum.cipher.core.domain.model.TimePeriod.THIS_MONTH,
+        val selectedTimeRange: com.masum.cipher.core.domain.model.TimeRange = com.masum.cipher.core.domain.model.TimeRange.from(com.masum.cipher.core.domain.model.TimePeriod.THIS_MONTH),
+        val totalBalance: Double = 0.0,
+        val totalIncome: Double = 0.0,
+        val totalExpenses: Double = 0.0,
+        val thisMonthExpenses: Double = 0.0,
+        val thisMonthIncome: Double = 0.0,
+        val currencyCode: String = com.masum.cipher.core.domain.model.AppCurrency.detectDefault().code,
+        val currencySymbol: String = com.masum.cipher.core.domain.model.AppCurrency.detectDefault().symbol,
+        val monthlyBudget: Double = 0.0,
+        val isDynamicBudget: Boolean = false,
+        val expenseComparisonPercent: Double? = null,
+        val expenseComparisonLabel: String? = null,
+        val previousPeriodExpenses: Double? = null,
+        val velocity: VelocityData = VelocityData(),
+        val categories: List<CategoryData> = emptyList(),
+        val draftTransaction: TransactionEntity? = null,
+        val promptCategoryRuleFor: TransactionEntity? = null,
+        val promptMerchantRuleFor: MerchantRenameRulePrompt? = null,
+        val customCategories: ImmutableList<com.masum.cipher.core.data.local.entity.CustomCategoryEntity> = persistentListOf(),
+        val splitsByTransactionId: ImmutableMap<Long, ImmutableList<com.masum.cipher.core.data.local.entity.TransactionSplitEntity>> = persistentMapOf(),
+        val accounts: ImmutableList<com.masum.cipher.core.domain.model.AccountItem> = persistentListOf()
+    ) : UiState
+
+    data class VelocityData(
+        val currentWeekAvg: Double = 0.0,
+        val lastWeekAvg: Double = 0.0,
+        val trendPercentage: Double = 0.0
+    )
+
+    data class Point(val x: Float, val y: Float, val timestamp: Long)
+
+    @androidx.compose.runtime.Immutable
+    data class CategoryData(
+        val category: String,
+        val amount: Double,
+        val percentage: Float,
+        val color: Long
+    )
+
+    sealed class Effect : UiEffect {
+        data class ShowUndoDelete(
+            val transaction: TransactionEntity,
+            val splits: List<com.masum.cipher.core.data.local.entity.TransactionSplitEntity> = emptyList()
+        ) : Effect()
+    }
+}

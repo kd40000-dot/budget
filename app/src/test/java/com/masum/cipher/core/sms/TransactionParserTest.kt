@@ -1,0 +1,648 @@
+package com.masum.cipher.core.sms
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class TransactionParserTest {
+
+    private lateinit var parser: TransactionParser
+
+    @Before
+    fun setup() {
+        parser = TransactionParser()
+    }
+
+    // ─── REJECTION ────────────────────────────────────────────────────────────
+
+    @Test
+    fun `OTP sms is rejected`() {
+        assertNull(parser.parse("Your OTP is 123456. Valid for 10 minutes. Do not share with anyone."))
+    }
+
+    @Test
+    fun `verification code sms is rejected`() {
+        assertNull(parser.parse("123456 is your verification code for SBI YONO. Do not share."))
+    }
+
+    @Test
+    fun `promo win sms is rejected`() {
+        assertNull(parser.parse("Congratulations! You have won Rs.10000 in our lucky draw. Claim now."))
+    }
+
+    @Test
+    fun `validity offer sms is rejected`() {
+        assertNull(parser.parse("Special offer: Get 50% off. Validity 24 hours only. Limited seats."))
+    }
+
+    @Test
+    fun `Jio promotional plan sms is rejected`() {
+        assertNull(parser.parse("Recharge with Rs.349 monthly plan for 2GB data per day. Exclusive offer for you!"))
+    }
+
+    @Test
+    fun `Airtel pack expiry sms is rejected`() {
+        assertNull(parser.parse("Your unlimited pack of Rs.299 expires tomorrow. Recharge now to stay active."))
+    }
+
+    @Test
+    fun `HDFC loan offer sms is rejected`() {
+        assertNull(parser.parse("Dear Customer, you are eligible for a pre-approved loan of Rs.5,00,000. Claim now!"))
+    }
+
+    @Test
+    fun `GPay promotional EMI loan notification is rejected`() {
+        assertNull(parser.parse("EMIs from ₹1,000 to fund your big purchase 🛍️ Take a personal loan of up to ₹40 lakh & enjoy low EMIs. Tap to learn more!"))
+    }
+
+    @Test
+    fun `promotional lifetime free credit card offer is rejected`() {
+        assertNull(parser.parse("Get a lifetime free credit card with Rs.50,000 credit limit! Apply now: bank.in/card"))
+    }
+
+    @Test
+    fun `promotional personal loan up to amount is rejected`() {
+        assertNull(parser.parse("Instant Personal Loan up to ₹5,00,000 approved for you! Flexible tenure & low interest. Avail now."))
+    }
+
+    @Test
+    fun `promotional EMI starting from amount is rejected`() {
+        assertNull(parser.parse("Exclusive Offer! EMIs starting from ₹999 on the latest iPhone. Tap to buy now."))
+    }
+
+    @Test
+    fun `promotional eligible for personal loan is rejected`() {
+        assertNull(parser.parse("Congratulations! You are eligible for a personal loan of up to Rs. 10 Lakh. Tap to apply."))
+    }
+
+    @Test
+    fun `promotional discount and cashback offers are rejected`() {
+        assertNull(parser.parse("Get flat ₹500 cashback on min purchase of ₹2000. Use code SAVE500."))
+        assertNull(parser.parse("Save up to Rs 200 on your next Swiggy order using HDFC Card. Tap to order."))
+        assertNull(parser.parse("Earn up to ₹1,000 cashback! Scratch card waiting in your rewards. Tap to scratch."))
+    }
+
+    @Test
+    fun `real credit card transaction at Slice is parsed correctly`() {
+        val result = parser.parse("Rs 500 spent on your credit card xx0032 at slice on 08-Oct")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+        assertEquals("SLICE", result.merchant)
+        assertEquals("0032", result.accountLast4)
+        assertEquals(false, result.isIncome)
+    }
+
+    @Test
+    fun `real loan EMI auto debit is parsed correctly`() {
+        val result = parser.parse("Your a/c no. XX1234 is debited for Rs.15000 on 05-Oct towards Loan EMI payment")
+        assertNotNull(result)
+        assertEquals(15000.0, result!!.amount, 0.001)
+        assertEquals("1234", result.accountLast4)
+        assertEquals(false, result.isIncome)
+    }
+
+    @Test
+    fun `real home loan EMI debit is parsed correctly`() {
+        val result = parser.parse("Rs 2,500 debited from A/C XX5678 for HDFC HOME LOAN EMI on 01-Oct. Avl Bal Rs 45,000")
+        assertNotNull(result)
+        assertEquals(2500.0, result!!.amount, 0.001)
+        assertEquals("5678", result.accountLast4)
+        assertEquals(false, result.isIncome)
+    }
+
+    @Test
+    fun `sms without transaction evidence is rejected even with amount and merchant`() {
+        assertNull(parser.parse("Rs.500 found at AMAZON. Great deals every day!"))
+    }
+
+    @Test
+    fun `sms with card evidence is NOT rejected`() {
+        assertNotNull(parser.parse("Rs.1,500 spent on Card ending 1234 at AMAZON. Avl limit: Rs.48,500."))
+    }
+
+    @Test
+    fun `sms with txn id evidence is NOT rejected`() {
+        val result = parser.parse("Rs.100.00 paid to Jio via UPI. Txn ID: 123456789.")
+        assertNotNull(result)
+        assertEquals(100.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `sms with vpa evidence is NOT rejected`() {
+        assertNotNull(parser.parse("Rs.50.00 sent to merchant@upi. Ref: 987654."))
+    }
+
+    @Test
+    fun `sms with call in footer is NOT rejected`() {
+        assertNotNull(parser.parse("Rs.500.00 debited from a/c XX1234. Avl Bal Rs.15000. Call 18001080 if not done by you."))
+    }
+
+    @Test
+    fun `sms with customer service is NOT rejected`() {
+        assertNotNull(parser.parse("INR 999.00 debited from your account XX1234 at NETFLIX. For customer service visit hdfc.com."))
+    }
+
+    @Test
+    fun `sms with report fraud is NOT rejected`() {
+        assertNotNull(parser.parse("Rs.350 debited from a/c XX1234 at ZOMATO. Report fraud at icici.com/report."))
+    }
+
+    // ─── AMOUNT EXTRACTION ────────────────────────────────────────────────────
+
+    @Test
+    fun `SBI UPI debit with Rs dot format`() {
+        val result = parser.parse("Rs.500.00 debited from a/c XX1234 on 01-06-26. Info: UPI/123456789012/SWIGGY/swiggy@okicici. Avl Bal: Rs.15000.00. Call 18001111 if not done by you.")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `HDFC credit card spent with commas`() {
+        val result = parser.parse("Rs.1,500 spent on HDFC Bank Credit Card XX1234 at AMAZON on 01-Jun-26. Avl limit: Rs.48,500.")
+        assertNotNull(result)
+        assertEquals(1500.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `Axis Bank INR format`() {
+        val result = parser.parse("INR 2,500.00 debited from Axis Bank a/c XX1234 at FLIPKART on 01/06/2026. Available Balance is INR 12,500.00.")
+        assertNotNull(result)
+        assertEquals(2500.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `Kotak UPI txn of format`() {
+        val result = parser.parse("You have done a UPI txn of Rs.350.00 from Kotak Bank AC XXXXXXXX to ZOMATO@okicici on 01/06/2026. UPI Ref No:123456789012345.")
+        assertNotNull(result)
+        assertEquals(350.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `amount before verb format`() {
+        val result = parser.parse("500.00 debited from your account XX1234. Avl Bal 12000.00.")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `avl bal is not picked up as transaction amount`() {
+        val result = parser.parse("Avl Bal Rs.15000. Rs.500 debited from a/c XX1234 at ZOMATO.")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `account number digits are not picked up as amount`() {
+        val result = parser.parse("Rs.250 debited from a/c no. 1234567890 at SWIGGY. Avl Bal Rs.5000.")
+        assertNotNull(result)
+        assertEquals(250.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `large amount with lakhs and commas`() {
+        val result = parser.parse("INR 1,25,000.00 credited to your SBI a/c XX1234. NEFT transfer.")
+        assertNotNull(result)
+        assertEquals(125000.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `Yes Bank debit with INR`() {
+        val result = parser.parse("Dear Customer, INR 999.00 has been debited from your Yes Bank Account XX1234 on 01-Jun-26 for SPOTIFY.")
+        assertNotNull(result)
+        assertEquals(999.0, result!!.amount, 0.001)
+    }
+
+    // ─── MERCHANT — BRAND DICTIONARY ──────────────────────────────────────────
+
+    @Test
+    fun `AMAZON is not corrupted to AMAZ`() {
+        val result = parser.parse("Rs.1,500 spent on HDFC Bank Credit Card XX1234 at AMAZON on 01-Jun-26.")
+        assertNotNull(result)
+        assertEquals("AMAZON", result!!.merchant)
+    }
+
+    @Test
+    fun `PHONEPE is not corrupted to PH`() {
+        val result = parser.parse("Rs.100.00 sent to PHONEPE via UPI on 01-Jun-26. UPI Ref 123456789.")
+        assertNotNull(result)
+        assertEquals("PHONEPE", result!!.merchant)
+    }
+
+    @Test
+    fun `VODAFONE is not corrupted to VODAF`() {
+        val result = parser.parse("Rs.399.00 paid to VODAFONE. Txn ID: 987654321.")
+        assertNotNull(result)
+        assertEquals("VODAFONE", result!!.merchant)
+    }
+
+    @Test
+    fun `ZOMATO detected from brand dictionary`() {
+        val result = parser.parse("Rs.350.00 debited from a/c XX1234 at ZOMATO on 01-Jun-26. Avl Bal Rs.5000.")
+        assertNotNull(result)
+        assertEquals("ZOMATO", result!!.merchant)
+    }
+
+    @Test
+    fun `SWIGGY detected from brand dictionary`() {
+        val result = parser.parse("Your ICICI Bank a/c XX1234 debited for Rs.280.00 at SWIGGY on 01-Jun-26. Call 18001080 if not done by you.")
+        assertNotNull(result)
+        assertEquals("SWIGGY", result!!.merchant)
+    }
+
+    @Test
+    fun `NETFLIX detected from brand dictionary`() {
+        val result = parser.parse("INR 649.00 debited from your HDFC a/c XX1234 at NETFLIX on 01-Jun-26.")
+        assertNotNull(result)
+        assertEquals("NETFLIX", result!!.merchant)
+    }
+
+    @Test
+    fun `IRCTC detected from brand dictionary`() {
+        val result = parser.parse("Rs.1250.00 paid to IRCTC for train ticket booking. UPI Ref 123456789012.")
+        assertNotNull(result)
+        assertEquals("IRCTC", result!!.merchant)
+    }
+
+    // ─── MERCHANT — VPA EXTRACTION ────────────────────────────────────────────
+
+    @Test
+    fun `ZOMATO extracted from VPA zomato@okicici`() {
+        val result = parser.parse("Rs.350.00 debited to zomato@okicici on 01-Jun-26. UPI Ref 123456789012.")
+        assertNotNull(result)
+        assertEquals("ZOMATO", result!!.merchant)
+    }
+
+    @Test
+    fun `local merchant extracted from VPA`() {
+        val result = parser.parse("Rs.150.00 paid to localcafe@oksbi via UPI. Ref 123456789.")
+        assertNotNull(result)
+        assertEquals("LOCALCAFE", result!!.merchant)
+    }
+
+    @Test
+    fun `phone number VPA is not used as merchant`() {
+        val result = parser.parse("Rs.500.00 sent to 9876543210@ybl via UPI. Ref 123456789.")
+        assertNotNull(result)
+        assertTrue(result!!.merchant != "9876543210")
+    }
+
+    // ─── MERCHANT — UPI INFO STRING ───────────────────────────────────────────
+
+    @Test
+    fun `merchant extracted from SBI UPI info string`() {
+        val result = parser.parse("Rs.280.00 debited from SBI a/c XX1234. Info: UPI/123456789012/SWIGGY ORDERS/SWIGGYIT@okaxis. Avl Bal Rs.10000. Call 18001111.")
+        assertNotNull(result)
+        assertEquals("SWIGGY", result!!.merchant)
+    }
+
+    @Test
+    fun `merchant extracted from UPI info string when not in brand dict`() {
+        val result = parser.parse("Rs.200.00 debited from a/c XX1234. Info: UPI/987654321098/HALDIRAMS STORE/haldirams@okhdfc. Avl Bal Rs.8000.")
+        assertNotNull(result)
+        assertEquals("HALDIRAMS STORE", result!!.merchant)
+    }
+
+    // ─── MERCHANT — STRUCTURAL ────────────────────────────────────────────────
+
+    @Test
+    fun `merchant extracted via at keyword`() {
+        val result = parser.parse("Rs.500.00 spent at Big Bazar on 01-Jun-26 using HDFC Card XX1234.")
+        assertNotNull(result)
+        assertEquals("BIG BAZAR", result!!.merchant)
+    }
+
+    @Test
+    fun `your account is not captured as merchant`() {
+        val result = parser.parse("Rs.5000.00 transferred to your account XX5678 from a/c XX1234.")
+        assertNotNull(result)
+        assertTrue(result!!.merchant != "YOUR ACCOUNT")
+    }
+
+    @Test
+    fun `fallback to miscellaneous when no merchant found`() {
+        val result = parser.parse("Rs.100.00 debited from a/c XX1234.")
+        assertNotNull(result)
+        assertEquals("MISCELLANEOUS", result!!.merchant)
+    }
+
+    // ─── INCOME vs EXPENSE ────────────────────────────────────────────────────
+
+    @Test
+    fun `salary credit is income`() {
+        val result = parser.parse("Rs.45000.00 credited to your SBI a/c XX1234 on 01-Jun-26. Info: NEFT/Salary/EMPLOYER NAME. Avl Bal Rs.50000.")
+        assertNotNull(result)
+        assertTrue(result!!.isIncome)
+    }
+
+    @Test
+    fun `cashback is income`() {
+        val result = parser.parse("Cashback of Rs.50.00 credited to your HDFC a/c XX1234. UPI Ref 123456.")
+        assertNotNull(result)
+        assertTrue(result!!.isIncome)
+    }
+
+    @Test
+    fun `refund is income`() {
+        val result = parser.parse("Rs.499.00 refunded to your a/c XX1234 by AMAZON. Avl Bal Rs.15000.")
+        assertNotNull(result)
+        assertTrue(result!!.isIncome)
+    }
+
+    @Test
+    fun `debit with credited in same sms is expense not income`() {
+        val result = parser.parse("Your SBI a/c XX1234 is debited with INR 500.00 on 01/06/2026 and a/c YY5678 is credited. UPI Ref 123456789.")
+        assertNotNull(result)
+        assertTrue(!result!!.isIncome)
+    }
+
+    @Test
+    fun `UPI payment expense is not income`() {
+        val result = parser.parse("Rs.350.00 debited from Axis Bank a/c XX1234 at ZOMATO on 01/06/2026. Avl Bal Rs.12000.")
+        assertNotNull(result)
+        assertTrue(!result!!.isIncome)
+    }
+
+    @Test
+    fun `ICICI transfer debit is expense`() {
+        val result = parser.parse("ICICI Bank Acct XX1234 debited for Rs 500.00 on 01-Jun-2026; SWIGGY credited. If not done by you, call 18001080.")
+        assertNotNull(result)
+        assertTrue(!result!!.isIncome)
+    }
+
+    // ─── RUPEE SYMBOL AND Rs/- FORMAT ────────────────────────────────────────
+
+    @Test
+    fun `rupee symbol prefix is parsed correctly`() {
+        val result = parser.parse("₹500.00 debited from your HDFC a/c XX1234 at ZOMATO on 01-Jun-26.")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `rupee symbol without space is parsed correctly`() {
+        val result = parser.parse("Your a/c debited ₹1,250.00 at AMAZON. Avl Bal ₹8,750.00.")
+        assertNotNull(result)
+        assertEquals(1250.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `Rs slash minus prefix format is parsed correctly`() {
+        val result = parser.parse("Rs/-500.00 debited from SBI a/c XX1234 at SWIGGY on 01-Jun-26.")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `amount with slash minus suffix is parsed correctly`() {
+        val result = parser.parse("INR 1,500/- debited from Axis Bank a/c XX1234 at FLIPKART.")
+        assertNotNull(result)
+        assertEquals(1500.0, result!!.amount, 0.001)
+    }
+
+    @Test
+    fun `avl bal rupee symbol is not picked as amount`() {
+        val result = parser.parse("₹350.00 debited from a/c XX1234 at ZOMATO. Avl Bal ₹9,650.00.")
+        assertNotNull(result)
+        assertEquals(350.0, result!!.amount, 0.001)
+    }
+
+    // ─── FROM KEYWORD MERCHANT EXTRACTION ────────────────────────────────────
+
+    @Test
+    fun `merchant extracted via from keyword for salary`() {
+        val result = parser.parse("Rs.55000.00 credited to your a/c XX1234 from EMPLOYER INDIA on 01-Jun-26.")
+        assertNotNull(result)
+        assertEquals("EMPLOYER INDIA", result!!.merchant)
+    }
+
+    @Test
+    fun `from a slash c is not captured as merchant`() {
+        val result = parser.parse("Rs.500.00 debited from a/c XX1234 at ZOMATO on 01-Jun-26.")
+        assertNotNull(result)
+        assertTrue(result!!.merchant != "A/C XX1234")
+    }
+
+    // ─── FULL PARSE — REAL BANK SMS ───────────────────────────────────────────
+
+    @Test
+    fun `full SBI UPI parse`() {
+        val result = parser.parse("Dear UPI user, Rs.499.00 debited from a/c XX1234 on 01-Jun-26. Info: UPI/123456789012/NETFLIX/netflix@okhdfc. Avl Bal: Rs.12501.00. Call 1800111 to report.")
+        assertNotNull(result)
+        assertEquals(499.0, result!!.amount, 0.001)
+        assertEquals("NETFLIX", result.merchant)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `full HDFC credit card parse`() {
+        val result = parser.parse("Rs.2,999 spent on HDFC Bank Credit Card XX1234 at FLIPKART on 01-Jun-26 at 15:30. Avl limit: Rs.47,001. To block card SMS BLOCK to 5676712.")
+        assertNotNull(result)
+        assertEquals(2999.0, result!!.amount, 0.001)
+        assertEquals("FLIPKART", result.merchant)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `full Kotak UPI parse`() {
+        val result = parser.parse("You have done a UPI txn of Rs.649.00 from Kotak Bank AC XXXXXXXX1234 to SPOTIFY@okicici on 01/06/2026 20:15:00. UPI Ref No:123456789012345.")
+        assertNotNull(result)
+        assertEquals(649.0, result!!.amount, 0.001)
+        assertEquals("SPOTIFY", result.merchant)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `full ICICI salary credit parse`() {
+        val result = parser.parse("INR 55000.00 credited to ICICI Bank Acct XX1234 on 01-Jun-26. Info: NEFT/SALARY JUNE/EMPLOYER INDIA PVT LTD. Avl Bal INR 60000.00.")
+        assertNotNull(result)
+        assertEquals(55000.0, result!!.amount, 0.001)
+        assertTrue(result.isIncome)
+    }
+
+    @Test
+    fun `full Axis UPI debit parse`() {
+        val result = parser.parse("INR 380.00 debited from Axis Bank a/c XX1234 on 01-Jun-26 for UPI payment to SWIGGY@okaxis. Call 18004195555 for queries.")
+        assertNotNull(result)
+        assertEquals(380.0, result!!.amount, 0.001)
+        assertEquals("SWIGGY", result.merchant)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `US Chase bank push notification parse`() {
+        val result = parser.parse("Chase: You made a $14.20 purchase at STARBUCKS with card ending 4012.", "USD")
+        assertNotNull(result)
+        assertEquals(14.20, result!!.amount, 0.001)
+        assertEquals("STARBUCKS", result.merchant)
+        assertEquals("USD", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `US Venmo payment parse`() {
+        val result = parser.parse("Venmo: You paid John $25.00 for Dinner", "USD")
+        assertNotNull(result)
+        assertEquals(25.0, result!!.amount, 0.001)
+        assertEquals("USD", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `UK Monzo transaction parse`() {
+        val result = parser.parse("You spent £12.50 at Pret A Manger", "GBP")
+        assertNotNull(result)
+        assertEquals(12.50, result!!.amount, 0.001)
+        assertEquals("GBP", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `EU N26 Euro transaction parse`() {
+        val result = parser.parse("N26: Spent €32.50 at Carrefour with card ending 1024", "EUR")
+        assertNotNull(result)
+        assertEquals(32.50, result!!.amount, 0.001)
+        assertEquals("CARREFOUR", result.merchant)
+        assertEquals("EUR", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `Canada Interac e-Transfer parse`() {
+        val result = parser.parse("INTERAC e-Transfer: You sent $85.00 to Tim Hortons", "CAD")
+        assertNotNull(result)
+        assertEquals(85.00, result!!.amount, 0.001)
+        assertEquals("TIM HORTONS", result.merchant)
+        assertEquals("CAD", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `Australia CommBank PayID parse`() {
+        val result = parser.parse("CommBank: You transferred $45.00 to Woolworths via PayID", "AUD")
+        assertNotNull(result)
+        assertEquals(45.00, result!!.amount, 0.001)
+        assertEquals("WOOLWORTHS", result.merchant)
+        assertEquals("AUD", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `UAE Emirates NBD AED parse`() {
+        val result = parser.parse("Emirates NBD: AED 150.00 spent on Card ending 4455 at Lulu Hypermarket", "AED")
+        assertNotNull(result)
+        assertEquals(150.00, result!!.amount, 0.001)
+        assertEquals("LULU HYPERMARKET", result.merchant)
+        assertEquals("AED", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `Singapore DBS PayNow parse`() {
+        val result = parser.parse("DBS: You have sent S$22.80 to Grab via PayNow", "SGD")
+        assertNotNull(result)
+        assertEquals(22.80, result!!.amount, 0.001)
+        assertEquals("GRAB", result.merchant)
+        assertEquals("SGD", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `Global universal fallback format parse`() {
+        val result = parser.parse("Paid €45.00 to ZARA with card ending 9999", "EUR")
+        assertNotNull(result)
+        assertEquals(45.0, result!!.amount, 0.001)
+        assertEquals("ZARA", result.merchant)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `HDFC UPI debit with trailing RRN and reference info`() {
+        val result = parser.parse("INR 450.00 debited from HDFC Bank A/C ending 4321 to Blue Tokai RRN 982374612938 on 03-09-26. Bal: INR 12000.00")
+        assertNotNull(result)
+        assertEquals(450.0, result!!.amount, 0.001)
+        assertEquals("BLUE TOKAI", result.merchant)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `ICICI debit card transaction with Auth code sanitized`() {
+        val result = parser.parse("Dear Customer, your Acct XX9012 is debited for INR 1,299.00 on 02-Sep-26 at Decathlon Auth 827361. Avl Bal: INR 35,000.00")
+        assertNotNull(result)
+        assertEquals(1299.0, result!!.amount, 0.001)
+        assertEquals("DECATHLON", result.merchant)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `US Chase bank alert with card ending indicator`() {
+        val result = parser.parse("Chase: You made a $34.50 transaction with card ending in 7721 at Trader Joe's.", "USD")
+        assertNotNull(result)
+        assertEquals(34.50, result!!.amount, 0.001)
+        assertEquals("TRADER JOE'S", result.merchant)
+        assertEquals("USD", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `Zero amount SMS is rejected`() {
+        val result = parser.parse("INR 0.00 debited from account ending 1234 at Test Merchant.")
+        assertNull(result)
+    }
+
+    @Test
+    fun `Paytm received payment notification parse`() {
+        val result = parser.parse("Received ₹1 from Sk Masum Ali Deposited in your State Bank Of India - 6693 on 08 September at 12:03 AM")
+        assertNotNull(result)
+        assertEquals(1.0, result!!.amount, 0.001)
+        assertEquals("SK MASUM ALI", result.merchant)
+        assertTrue(result.isIncome)
+    }
+
+    @Test
+    fun `Paytm received payment with bank name parse`() {
+        val result = parser.parse("Received ₹1 from Mr Gunjan Rajbanshi Deposited in your Slice Small Finance Bank Ltd - 5470 on 07 September at 11:42 PM")
+        assertNotNull(result)
+        assertEquals(1.0, result!!.amount, 0.001)
+        assertEquals("MR GUNJAN RAJBANSHI", result.merchant)
+        assertTrue(result.isIncome)
+    }
+
+    @Test
+    fun `Slice paid you notification parse`() {
+        val result = parser.parse("Mr GUNJAN RAJBANSHI paid you ₹1.00 Payment from slice")
+        assertNotNull(result)
+        assertEquals(1.0, result!!.amount, 0.001)
+        assertEquals("MR GUNJAN RAJBANSHI", result.merchant)
+        assertTrue(result.isIncome)
+    }
+
+    @Test
+    fun `Slice paid you notification with tap to view parse`() {
+        val result = parser.parse("Mr GUNJAN RAJBANSHI paid you ₹1.00 Tap to view.")
+        assertNotNull(result)
+        assertEquals(1.0, result!!.amount, 0.001)
+        assertEquals("MR GUNJAN RAJBANSHI", result.merchant)
+        assertTrue(result.isIncome)
+    }
+
+    @Test
+    fun `Google Pay received payment notification parse`() {
+        val result = parser.parse("Rahul Sharma sent you ₹500.00 on Google Pay")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+        assertEquals("RAHUL SHARMA", result.merchant)
+        assertTrue(result.isIncome)
+    }
+
+    @Test
+    fun `Paytm received simple notification parse`() {
+        val result = parser.parse("Received ₹500 from Rahul Sharma on Paytm")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+        assertEquals("RAHUL SHARMA", result.merchant)
+        assertTrue(result.isIncome)
+    }
+}

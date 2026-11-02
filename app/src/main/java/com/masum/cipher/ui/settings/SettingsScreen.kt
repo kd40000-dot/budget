@@ -1,0 +1,2602 @@
+package com.masum.cipher.ui.settings
+
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
+import com.masum.cipher.R
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.masum.cipher.core.data.local.pref.AccentColor
+import com.masum.cipher.core.data.local.pref.AppTheme
+import com.masum.cipher.ui.components.ProFeatureGateSheet
+import com.masum.cipher.ui.components.ProFeaturePerk
+import com.masum.cipher.core.data.local.pref.AutoBackupFrequency
+import com.masum.cipher.core.security.BiometricAuthenticator
+import com.masum.cipher.core.util.performVibrate
+import com.masum.cipher.ui.components.VaultCard
+import com.masum.cipher.ui.components.WhatsNewSheet
+import com.masum.cipher.ui.theme.DMSans
+import com.masum.cipher.ui.theme.EmeraldIncome
+import com.masum.cipher.ui.theme.Lato
+import com.masum.cipher.ui.theme.RoseExpense
+import com.masum.cipher.ui.theme.Typography
+import compose.icons.LucideIcons
+import compose.icons.lucideicons.Activity
+import compose.icons.lucideicons.BellRing
+import compose.icons.lucideicons.BookOpen
+import compose.icons.lucideicons.Bug
+import compose.icons.lucideicons.CalendarClock
+import compose.icons.lucideicons.Check
+import compose.icons.lucideicons.ChevronDown
+import compose.icons.lucideicons.ChevronLeft
+import compose.icons.lucideicons.ChevronRight
+import compose.icons.lucideicons.Clock
+import compose.icons.lucideicons.Crown
+import compose.icons.lucideicons.Download
+import compose.icons.lucideicons.CloudDownload
+import compose.icons.lucideicons.CloudUpload
+import compose.icons.lucideicons.Coffee
+import compose.icons.lucideicons.Database
+import compose.icons.lucideicons.Eye
+import compose.icons.lucideicons.EyeOff
+import compose.icons.lucideicons.FileSpreadsheet
+import compose.icons.lucideicons.FileText
+import compose.icons.lucideicons.FolderDown
+import compose.icons.lucideicons.FolderSync
+import compose.icons.lucideicons.Github
+import compose.icons.lucideicons.Globe
+import compose.icons.lucideicons.Info
+import compose.icons.lucideicons.Laptop
+import compose.icons.lucideicons.Lock
+import compose.icons.lucideicons.Mail
+import compose.icons.lucideicons.MessageSquare
+import compose.icons.lucideicons.MessagesSquare
+import compose.icons.lucideicons.Moon
+import compose.icons.lucideicons.Palette
+import compose.icons.lucideicons.RefreshCw
+import compose.icons.lucideicons.Search
+import compose.icons.lucideicons.Settings
+import compose.icons.lucideicons.Shapes
+import compose.icons.lucideicons.ShieldCheck
+import compose.icons.lucideicons.Smartphone
+import compose.icons.lucideicons.Sparkles
+import compose.icons.lucideicons.Star
+import compose.icons.lucideicons.Sun
+import compose.icons.lucideicons.Target
+import compose.icons.lucideicons.Timer
+import compose.icons.lucideicons.Trash2
+import compose.icons.lucideicons.Wallet
+import compose.icons.lucideicons.X
+import compose.icons.lucideicons.Zap
+import kotlin.time.Duration.Companion.milliseconds
+import androidx.core.net.toUri
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    biometricAuthenticator: BiometricAuthenticator,
+    onNavigateToPrivacy: () -> Unit,
+    onNavigateToManageApps: () -> Unit,
+    onNavigateToSmartRules: () -> Unit,
+    onNavigateToCategories: () -> Unit = {},
+    onNavigateToAccounts: () -> Unit = {},
+    onNavigateToCurrency: () -> Unit = {},
+    onNavigateToPro: () -> Unit = {}
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val view = androidx.compose.ui.platform.LocalView.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    var searchQuery by remember { mutableStateOf("") }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showTimeoutDialog by remember { mutableStateOf(false) }
+    var showBudgetDialog by remember { mutableStateOf(false) }
+    var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var showCrashLogDialog by remember { mutableStateOf(false) }
+    var showPermissionsHealthSheet by remember { mutableStateOf(false) }
+    var showWhatsNewSheet by remember { mutableStateOf(false) }
+    var expandedSection by rememberSaveable { mutableStateOf<String?>(null) }
+    var showFrequencyDialog by remember { mutableStateOf(false) }
+    
+    var showBackupPasswordDialog by remember { mutableStateOf<BackupAction?>(null) }
+    var backupPassword by remember { mutableStateOf("") }
+    var restoreClearExisting by remember { mutableStateOf(false) }
+    var pendingUri by remember { mutableStateOf<Uri?>(null) }
+    var isColorPickerExpanded by remember { mutableStateOf(false) }
+    var showAutoBackupPasswordSetupDialog by remember { mutableStateOf(false) }
+    val revealPasswordPromptTitle = stringResource(R.string.show_backup_password_title)
+    val revealPasswordPromptSubtitle = stringResource(R.string.show_backup_password_prompt)
+    var autoBackupSetupPassword by remember { mutableStateOf("") }
+    var showProSheet by remember { mutableStateOf(false) }
+    var showPdfUpsellSheet by remember { mutableStateOf(false) }
+    var showAccentColorsGateSheet by remember { mutableStateOf(false) }
+
+    val timeoutOptions = listOf(
+        stringResource(R.string.timeout_immediately) to 0L,
+        stringResource(R.string.timeout_30s) to 30_000L,
+        stringResource(R.string.timeout_1m) to 60_000L,
+        stringResource(R.string.timeout_5m) to 300_000L,
+        stringResource(R.string.timeout_never) to Long.MAX_VALUE
+    )
+
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        uri?.let { pendingUri = it; showBackupPasswordDialog = BackupAction.EXPORT }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { pendingUri = it; showBackupPasswordDialog = BackupAction.IMPORT }
+    }
+
+    val csvExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        uri?.let { viewModel.handleIntent(SettingsContract.Intent.ExportCsv(it)) }
+    }
+    
+    val pdfExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        uri?.let { viewModel.handleIntent(SettingsContract.Intent.ExportPdf(it)) }
+    }
+
+    val autoBackupFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let {
+            val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            context.contentResolver.takePersistableUriPermission(it, takeFlags)
+            viewModel.handleIntent(SettingsContract.Intent.SetAutoBackupUri(it.toString()))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect { effect ->
+            if (effect is SettingsContract.Effect.ShowToast) {
+                Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val query = searchQuery.trim().lowercase()
+
+    val matchTheme = query.isBlank() || "light".contains(query) || "dark".contains(query) || "system".contains(query) || "theme".contains(query)
+    val matchAccent = query.isBlank() || "accent color".contains(query)
+    val matchHaptic = query.isBlank() || "haptic feedback".contains(query) || "physical response to touch".contains(query)
+    val matchProBadge = query.isBlank() || "show pro badge".contains(query) || "pro badge".contains(query) || "badge".contains(query)
+    val matchAppearance = query.isBlank() || "appearance".contains(query) || "interaction".contains(query) || matchTheme || matchAccent || matchHaptic || (state.isPro && matchProBadge)
+
+    val matchBiometric = query.isBlank() || "biometric lock".contains(query) || "require authentication to open the app".contains(query)
+    val matchAutoLock = query.isBlank() || "auto-lock timer".contains(query) || "auto lock".contains(query)
+    val matchPrivacy = query.isBlank() || "privacy mode".contains(query) || "hide balances on dashboard".contains(query)
+    val matchSecurity = query.isBlank() || "security".contains(query) || "privacy".contains(query) || matchBiometric || matchAutoLock || matchPrivacy
+
+    val matchApps = query.isBlank() || "manage tracked apps".contains(query) || "select which apps to monitor for transactions".contains(query)
+    val matchHealth = query.isBlank() || "permissions health".contains(query) || "check if cipher is working at its best".contains(query)
+    val matchRules = query.isBlank() || "manage category rules".contains(query) || "view and edit custom merchant categories".contains(query)
+    val matchCategories = query.isBlank() || "categories".contains(query) || "custom categories".contains(query) || "manage categories".contains(query) || "budgets".contains(query)
+    val matchAccounts = query.isBlank() || "accounts".contains(query) || "wallets".contains(query) || "bank accounts".contains(query) || "cards".contains(query) || "net worth".contains(query)
+    val matchAutomation = query.isBlank() || "automation".contains(query) || "tracking".contains(query) || matchApps || matchHealth || matchRules || matchCategories || matchAccounts
+
+    val matchNotifyTx = query.isBlank() || "transaction alerts".contains(query) || "interactive transaction alerts".contains(query)
+    val matchNotifyBudget = query.isBlank() || "budget alerts".contains(query) || "budget warnings".contains(query)
+    val matchNotifyDaily = query.isBlank() || "daily spending summary".contains(query) || "daily summary".contains(query)
+    val matchNotifyMonthly = query.isBlank() || "monthly wrapped".contains(query) || "monthly wrap-up".contains(query)
+    val matchNotifySubs = query.isBlank() || "subscription reminders".contains(query) || "recurring subscriptions".contains(query)
+    val matchNotifyUncategorized = query.isBlank() || "uncategorized reminders".contains(query) || "action needed".contains(query)
+    val matchNotifyApp = query.isBlank() || "new app suggestions".contains(query) || "payment app detected".contains(query)
+    val matchNotifyUpdates = query.isBlank() || "update notifications".contains(query) || "app updates".contains(query) || "update".contains(query)
+    val matchNotifySystem = query.isBlank() || "system notification channels".contains(query) || "notification channels".contains(query)
+    val matchNotifications = query.isBlank() || "notifications".contains(query) || "alerts".contains(query) || matchNotifyTx || matchNotifyBudget || matchNotifyDaily || matchNotifyMonthly || matchNotifySubs || matchNotifyUncategorized || matchNotifyApp || matchNotifyUpdates || matchNotifySystem
+
+    val matchBudget = query.isBlank() || "monthly budget".contains(query) || "budget".contains(query)
+    val matchGoals = query.isBlank() || "financial goals".contains(query) || matchBudget
+
+    val matchCurrency = query.isBlank() || "currency & region".contains(query) || "currency".contains(query) || "region".contains(query) || "preferred currency".contains(query) || "dollar".contains(query) || "rupee".contains(query) || "euro".contains(query) || "pound".contains(query) || "usd".contains(query) || "inr".contains(query) || "eur".contains(query) || "gbp".contains(query)
+    val matchRegion = query.isBlank() || "currency & region".contains(query) || "region".contains(query) || "locale".contains(query) || matchCurrency
+
+    val matchCsv = query.isBlank() || "export csv report".contains(query)
+    val matchPdf = query.isBlank() || "export pdf statement".contains(query)
+    val matchBackup = query.isBlank() || "backup vault".contains(query)
+    val matchRestore = query.isBlank() || "restore vault".contains(query)
+    val matchClear = query.isBlank() || "clear all data".contains(query)
+    val matchAutoBackup = query.isBlank() || "enable auto-backup".contains(query) || "silently backup your vault locally".contains(query)
+    val matchFreq = query.isBlank() || "backup frequency".contains(query)
+    val matchLoc = query.isBlank() || "backup location".contains(query)
+    val matchData = query.isBlank() || "data".contains(query) || "backup".contains(query) || matchCsv || matchPdf || matchBackup || matchRestore || matchClear || matchAutoBackup || matchFreq || matchLoc
+
+    val matchRate = query.isBlank() || "rate on google play".contains(query) || "enjoying cipher? leave a review!".contains(query)
+    val matchFeedback = query.isBlank() || "feedback & feature requests".contains(query)
+    val matchUpdate = query.isBlank() || "check for updates".contains(query) || "look for the latest version on play store".contains(query)
+    val matchCrash = query.isBlank() || "app diagnostics".contains(query) || "view and copy crash logs".contains(query)
+    val matchContact = query.isBlank() || "contact developer".contains(query)
+    val matchSource = query.isBlank() || "open source".contains(query)
+    val matchPrivacyPol = query.isBlank() || "privacy & terms".contains(query) || "privacy policy".contains(query) || "terms of service".contains(query) || "terms and conditions".contains(query)
+    val matchSupportDev = query.isBlank() || "support development".contains(query)
+    val matchAbout = query.isBlank() || "about".contains(query) || "support".contains(query) || matchRate || matchFeedback || matchUpdate || matchCrash || matchContact || matchSource || matchPrivacyPol || matchSupportDev
+
+    Scaffold(
+        modifier = Modifier.pointerInput(Unit) {
+            detectTapGestures(onTap = { focusManager.clearFocus() })
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .statusBarsPadding()
+                    .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_title),
+                    style = Typography.headlineMedium.copy(
+                        fontFamily = Lato,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 28.sp,
+                        letterSpacing = (-0.8).sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 18.dp)
+                )
+
+                val accentColor = Color(state.accentColor.colorValue)
+                val searchGradient = Brush.horizontalGradient(
+                    colors = listOf(
+                        accentColor.copy(alpha = 0.12f),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                    )
+                )
+
+                var isFocused by remember { mutableStateOf(false) }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(searchGradient)
+                        .border(
+                            width = 1.dp,
+                            color = if (isFocused || searchQuery.isNotEmpty()) accentColor.copy(alpha = 0.65f) else accentColor.copy(alpha = 0.22f),
+                            shape = RoundedCornerShape(22.dp)
+                        )
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = LucideIcons.Search,
+                        contentDescription = stringResource(R.string.action_search),
+                        tint = if (isFocused || searchQuery.isNotEmpty()) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { isFocused = it.isFocused },
+                        textStyle = Typography.bodyMedium.copy(
+                            fontFamily = DMSans,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 13.5.sp
+                        ),
+                        cursorBrush = SolidColor(accentColor),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                        decorationBox = { innerTextField ->
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                if (searchQuery.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.search_settings_hint),
+                                        style = Typography.bodyMedium.copy(
+                                            fontFamily = DMSans,
+                                            fontSize = 13.5.sp
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
+                    )
+
+                    if (searchQuery.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    searchQuery = ""
+                                    focusManager.clearFocus()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = LucideIcons.X,
+                                contentDescription = "Clear",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 140.dp)
+        ) {
+            val proTierDisplayTitle = remember(state.proTier) {
+                when (state.proTier.uppercase()) {
+                    "MONTHLY" -> "Monthly Pro Pass"
+                    "HALF_YEARLY", "6MONTH", "6-MONTH" -> "6-Month Pro Pass"
+                    "ANNUAL", "YEARLY", "1-YEAR", "1YEAR" -> "1-Year Annual Pass"
+                    "LIFETIME" -> "Lifetime VIP Pass"
+                    "PROMO" -> "VIP Early Bird Pass"
+                    "DEV" -> "Developer Edition"
+                    else -> "Cipher Pro Active"
+                }
+            }
+            val proTierBadgeText = remember(state.proTier) {
+                when (state.proTier.uppercase()) {
+                    "LIFETIME" -> "LIFETIME"
+                    "ANNUAL", "YEARLY", "1-YEAR", "1YEAR" -> "ANNUAL"
+                    "HALF_YEARLY", "6MONTH", "6-MONTH" -> "6-MONTH"
+                    "MONTHLY" -> "MONTHLY"
+                    else -> "ACTIVE"
+                }
+            }
+
+            val proSubtitleText = remember(state.isPro, state.proTier, state.proExpiresAtEpochMs) {
+                if (!state.isPro) {
+                    "Widgets, smart rules, custom PDF reports & extra themes"
+                } else if (state.proExpiresAtEpochMs > 0L) {
+                    val formattedDate = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(state.proExpiresAtEpochMs))
+                    "Active until $formattedDate • Tap to manage"
+                } else {
+                    "All Pro features unlocked • Lifetime Access"
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(
+                        if (state.isPro) {
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    EmeraldIncome.copy(alpha = 0.18f),
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                            )
+                        } else {
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(0xFFF59E0B).copy(alpha = 0.16f),
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                    )
+                    .border(
+                        width = 1.2.dp,
+                        color = if (state.isPro) EmeraldIncome.copy(alpha = 0.55f) else Color(0xFFF59E0B).copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(22.dp)
+                    )
+                    .clickable {
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = false)
+                        onNavigateToPro()
+                    }
+                    .padding(horizontal = 18.dp, vertical = 15.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (state.isPro) EmeraldIncome.copy(alpha = 0.22f) else Color(0xFFF59E0B).copy(alpha = 0.20f)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (state.isPro) LucideIcons.ShieldCheck else LucideIcons.Crown,
+                                contentDescription = "Cipher Pro",
+                                tint = if (state.isPro) EmeraldIncome else Color(0xFFF59E0B),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (state.isPro) proTierDisplayTitle else stringResource(R.string.settings_pro_upgrade),
+                                    style = Typography.titleMedium.copy(
+                                        fontFamily = DMSans,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    ),
+                                    color = if (state.isPro) EmeraldIncome else Color(0xFFF59E0B)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(
+                                            if (state.isPro) EmeraldIncome.copy(alpha = 0.22f)
+                                             else Color(0xFFF59E0B).copy(alpha = 0.22f)
+                                        )
+                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = if (state.isPro) proTierBadgeText else "UPGRADE",
+                                        style = Typography.labelSmall.copy(
+                                            fontFamily = Lato,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp,
+                                            letterSpacing = 0.5.sp
+                                        ),
+                                        color = if (state.isPro) EmeraldIncome else Color(0xFFF59E0B)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = proSubtitleText,
+                                style = Typography.bodySmall.copy(
+                                    fontFamily = Lato,
+                                    fontSize = 11.5.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = LucideIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            if (matchAppearance) {
+SettingsSection(stringResource(R.string.settings_appearance), icon = LucideIcons.Palette, isHapticsEnabled = state.isHapticsEnabled, isExpanded = expandedSection == "APPEARANCE" || query.isNotBlank(), onToggle = { expandedSection = if (expandedSection == "APPEARANCE") null else "APPEARANCE" }) {
+                if (matchTheme) {
+Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ThemeOptionCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.theme_light),
+                        icon = LucideIcons.Sun,
+                        isSelected = state.theme == AppTheme.LIGHT,
+                        onClick = {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.UpdateTheme(AppTheme.LIGHT))
+                        }
+                    )
+                    ThemeOptionCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.theme_dark),
+                        icon = LucideIcons.Moon,
+                        isSelected = state.theme == AppTheme.DARK,
+                        onClick = {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.UpdateTheme(AppTheme.DARK))
+                        }
+                    )
+                    ThemeOptionCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.theme_system),
+                        icon = LucideIcons.Laptop,
+                        isSelected = state.theme == AppTheme.SYSTEM,
+                        onClick = {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.UpdateTheme(AppTheme.SYSTEM))
+                        }
+                    )
+                }
+                
+                }
+HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                
+                if (matchAccent) {
+Column(modifier = Modifier.fillMaxWidth()) {
+                    val view = androidx.compose.ui.platform.LocalView.current
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                view.performVibrate(state.isHapticsEnabled)
+                                isColorPickerExpanded = !isColorPickerExpanded
+                            }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = LucideIcons.Palette,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.accent_color_title),
+                                    style = Typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = state.accentColor.colorName,
+                                    style = Typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        val chevronRotation by androidx.compose.animation.core.animateFloatAsState(
+                            targetValue = if (isColorPickerExpanded) 180f else 0f,
+                            label = "chevron_rotation"
+                        )
+                        Icon(
+                            imageVector = LucideIcons.ChevronDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(chevronRotation)
+                        )
+                    }
+
+                    val colorScrollState = rememberScrollState()
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isColorPickerExpanded,
+                        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.accent_color_title).uppercase(),
+                                    style = Typography.labelSmall.copy(
+                                        fontFamily = Lato,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp,
+                                        fontSize = 10.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(26.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
+                                            .border(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), CircleShape)
+                                            .clickable {
+                                                view.performVibrate(state.isHapticsEnabled, isLongPress = false)
+                                                coroutineScope.launch {
+                                                    colorScrollState.animateScrollBy(-240f)
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = LucideIcons.ChevronLeft,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(26.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
+                                            .border(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), CircleShape)
+                                            .clickable {
+                                                view.performVibrate(state.isHapticsEnabled, isLongPress = false)
+                                                coroutineScope.launch {
+                                                    colorScrollState.animateScrollBy(240f)
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = LucideIcons.ChevronRight,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(colorScrollState)
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AccentColor.entries.forEach { color ->
+                                    val isSelected = state.accentColor == color
+                                    val scale by androidx.compose.animation.core.animateFloatAsState(
+                                        targetValue = if (isSelected) 1.12f else 1f,
+                                        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 300f),
+                                        label = "color_scale"
+                                    )
+                                    val borderColor by androidx.compose.animation.animateColorAsState(
+                                        targetValue = if (isSelected) Color(color.colorValue) else Color.Transparent,
+                                        animationSpec = androidx.compose.animation.core.tween(300),
+                                        label = "border_color"
+                                    )
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null
+                                            ) {
+                                                if (color.isProOnly && !state.isPro) {
+                                                    view.performVibrate(state.isHapticsEnabled, isLongPress = false)
+                                                    showAccentColorsGateSheet = true
+                                                } else if (!isSelected) {
+                                                    view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                                                    viewModel.handleIntent(SettingsContract.Intent.UpdateAccentColor(color))
+                                                }
+                                            }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(46.dp)
+                                                .scale(scale)
+                                                .border(2.5.dp, borderColor, CircleShape)
+                                                .padding(3.5.dp)
+                                                .background(Color(color.colorValue), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = LucideIcons.Check,
+                                                    contentDescription = null,
+                                                    tint = if (Color(color.colorValue).luminance() > 0.6f) Color.Black else Color.White,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            } else if (color.isProOnly && !state.isPro) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(18.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.Black.copy(alpha = 0.55f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = LucideIcons.Lock,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFFFBBF24),
+                                                        modifier = Modifier.size(10.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = color.colorName.substringAfter(" "),
+                                            style = Typography.labelSmall.copy(
+                                                fontFamily = Lato,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                fontSize = 10.5.sp
+                                            ),
+                                            color = if (isSelected) Color(color.colorValue) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (matchHaptic) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                VaultSettingsSwitch(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.Zap,
+                    title = stringResource(R.string.haptic_feedback_title),
+                    description = stringResource(R.string.haptic_feedback_desc),
+                    checked = state.isHapticsEnabled,
+                    onCheckedChange = { 
+                        view.performVibrate(it, isLongPress = true)
+                        viewModel.handleIntent(SettingsContract.Intent.SetHapticsEnabled(it)) 
+                    }
+                )
+            }
+
+            if (state.isPro && matchProBadge) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                VaultSettingsSwitch(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.Crown,
+                    title = stringResource(R.string.show_pro_badge_title),
+                    description = stringResource(R.string.show_pro_badge_desc),
+                    checked = state.showProBadge,
+                    onCheckedChange = { 
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = false)
+                        viewModel.handleIntent(SettingsContract.Intent.SetShowProBadge(it)) 
+                    }
+                )
+            }
+        }
+    }
+
+    if (matchRegion) {
+        SettingsSection(
+            stringResource(R.string.settings_currency_region),
+            icon = LucideIcons.Globe,
+            isHapticsEnabled = state.isHapticsEnabled,
+            isExpanded = expandedSection == "CURRENCY & REGION" || query.isNotBlank(),
+            onToggle = { expandedSection = if (expandedSection == "CURRENCY & REGION") null else "CURRENCY & REGION" }
+        ) {
+            VaultSettingsItem(
+                isHapticsEnabled = state.isHapticsEnabled,
+                icon = LucideIcons.Globe,
+                title = stringResource(R.string.settings_preferred_currency),
+                subtitle = stringResource(R.string.settings_currency_subtitle),
+                value = "${state.currencyCode} (${state.currencySymbol})",
+                onClick = {
+                    view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                    onNavigateToCurrency()
+                }
+            )
+
+            VaultSettingsItem(
+                isHapticsEnabled = state.isHapticsEnabled,
+                icon = LucideIcons.Globe,
+                title = stringResource(R.string.settings_app_language),
+                subtitle = stringResource(R.string.settings_language_subtitle),
+                value = com.masum.cipher.core.domain.model.AppLanguage.fromCode(state.appLanguage).nativeName,
+                onClick = {
+                    view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                    showLanguageDialog = true
+                }
+            )
+        }
+    }
+
+    if (matchSecurity) {
+        SettingsSection(stringResource(R.string.settings_security_privacy), icon = LucideIcons.Lock, isHapticsEnabled = state.isHapticsEnabled, isExpanded = expandedSection == "SECURITY & PRIVACY" || query.isNotBlank(), onToggle = { expandedSection = if (expandedSection == "SECURITY & PRIVACY") null else "SECURITY & PRIVACY" }) {
+                if (matchBiometric) VaultSettingsSwitch(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.ShieldCheck,
+                    title = stringResource(R.string.biometric_lock_title),
+                    description = stringResource(R.string.biometric_lock_desc),
+                    checked = state.isBiometricEnabled,
+                    onCheckedChange = { isEnabling ->
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        if (isEnabling && biometricAuthenticator.isBiometricAvailable()) {
+                            biometricAuthenticator.authenticate(
+                                activity = context as FragmentActivity,
+                                onSuccess = { viewModel.handleIntent(SettingsContract.Intent.SetBiometricEnabled(true)) },
+                                onError = { }
+                            )
+                        } else {
+                            viewModel.handleIntent(SettingsContract.Intent.SetBiometricEnabled(isEnabling))
+                        }
+                    }
+                )
+                if (matchAutoLock) VaultSettingsItem(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.Timer,
+                    title = stringResource(R.string.auto_lock_timer_title),
+                    value = when (state.autoLockTimeout) {
+                        0L -> stringResource(R.string.timeout_immediately)
+                        30_000L -> stringResource(R.string.timeout_30s)
+                        60_000L -> stringResource(R.string.timeout_1m)
+                        300_000L -> stringResource(R.string.timeout_5m)
+                        else -> stringResource(R.string.timeout_never)
+                    },
+                    onClick = {
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        showTimeoutDialog = true
+                    }
+                )
+                if (matchPrivacy) VaultSettingsSwitch(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.EyeOff,
+                    title = stringResource(R.string.privacy_mode_title),
+                    description = stringResource(R.string.privacy_mode_desc),
+                    checked = state.isPrivacyModeEnabled,
+                    onCheckedChange = { 
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        viewModel.handleIntent(SettingsContract.Intent.SetPrivacyModeEnabled(it)) 
+                    }
+                )
+            }
+
+            }
+            if (matchAutomation) {
+                SettingsSection(stringResource(R.string.settings_automation_tracking), icon = LucideIcons.Activity, isHapticsEnabled = state.isHapticsEnabled, isExpanded = expandedSection == "AUTOMATION & TRACKING" || query.isNotBlank(), onToggle = { expandedSection = if (expandedSection == "AUTOMATION & TRACKING") null else "AUTOMATION & TRACKING" }) {
+                    if (matchApps) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Smartphone,
+                        title = stringResource(R.string.manage_tracked_apps_title),
+                        subtitle = stringResource(R.string.manage_tracked_apps_desc),
+                        onClick = onNavigateToManageApps
+                    )
+                    if (matchHealth) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Activity,
+                        title = stringResource(R.string.permissions_health_title),
+                        subtitle = stringResource(R.string.permissions_health_desc),
+                        onClick = {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            showPermissionsHealthSheet = true
+                        }
+                    )
+                
+                    if (matchRules) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.BookOpen,
+                        title = stringResource(R.string.manage_category_rules_title),
+                        subtitle = stringResource(R.string.manage_category_rules_desc),
+                        onClick = onNavigateToSmartRules
+                    )
+                    
+                    if (matchAccounts) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Wallet,
+                        title = "Accounts & Wallets",
+                        subtitle = "Manage bank accounts, cash wallets & credit cards",
+                        onClick = onNavigateToAccounts
+                    )
+
+                    if (matchCategories) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Shapes,
+                        title = stringResource(R.string.nav_categories),
+                        subtitle = stringResource(R.string.custom_category_subtitle),
+                        onClick = onNavigateToCategories
+                    )
+                }
+            }
+
+            if (matchNotifications) {
+                SettingsSection(stringResource(R.string.settings_notifications), icon = LucideIcons.BellRing, isHapticsEnabled = state.isHapticsEnabled, isExpanded = expandedSection == "NOTIFICATIONS" || query.isNotBlank(), onToggle = { expandedSection = if (expandedSection == "NOTIFICATIONS") null else "NOTIFICATIONS" }) {
+                    if (matchNotifyTx) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.BellRing,
+                        title = stringResource(R.string.notify_transactions_title),
+                        description = stringResource(R.string.notify_transactions_desc),
+                        checked = state.notifyAllTransactions,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifyAllTransactions(it)) 
+                        }
+                    )
+                    if (matchNotifyBudget) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Target,
+                        title = stringResource(R.string.notify_budget_title),
+                        description = stringResource(R.string.notify_budget_desc),
+                        checked = state.notifyBudgetAlerts,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifyBudgetAlerts(it)) 
+                        }
+                    )
+                    if (matchNotifyDaily) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Clock,
+                        title = stringResource(R.string.notify_daily_title),
+                        description = stringResource(R.string.notify_daily_desc),
+                        checked = state.notifyDailySummary,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifyDailySummary(it)) 
+                        }
+                    )
+                    if (matchNotifyMonthly) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.CalendarClock,
+                        title = stringResource(R.string.notify_monthly_title),
+                        description = stringResource(R.string.notify_monthly_desc),
+                        checked = state.notifyMonthlyWrapped,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifyMonthlyWrapped(it)) 
+                        }
+                    )
+                    if (matchNotifySubs) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.RefreshCw,
+                        title = stringResource(R.string.notify_subs_title),
+                        description = stringResource(R.string.notify_subs_desc),
+                        checked = state.notifySubscriptions,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifySubscriptions(it)) 
+                        }
+                    )
+                    if (matchNotifyUncategorized) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Info,
+                        title = stringResource(R.string.notify_uncategorized_title),
+                        description = stringResource(R.string.notify_uncategorized_desc),
+                        checked = state.notifyUncategorizedReminder,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifyUncategorizedReminder(it)) 
+                        }
+                    )
+                    if (matchNotifyApp) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Smartphone,
+                        title = stringResource(R.string.notify_new_app_title),
+                        description = stringResource(R.string.notify_new_app_desc),
+                        checked = state.notifyNewAppDetected,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifyNewAppDetected(it)) 
+                        }
+                    )
+                    if (matchNotifyUpdates) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.CloudDownload,
+                        title = stringResource(R.string.notify_app_updates_title),
+                        description = stringResource(R.string.notify_app_updates_desc),
+                        checked = state.notifyAppUpdates,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifyAppUpdates(it)) 
+                        }
+                    )
+                    if (matchNotifySystem) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Settings,
+                        title = stringResource(R.string.notify_system_title),
+                        subtitle = stringResource(R.string.notify_system_desc),
+                        onClick = {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            try {
+                                val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = "package:${context.packageName}".toUri()
+                                }
+                                context.startActivity(intent)
+                            }
+                        }
+                    )
+                }
+            }
+if (matchGoals) {
+SettingsSection(stringResource(R.string.settings_financial_goals), icon = LucideIcons.Target, isHapticsEnabled = state.isHapticsEnabled, isExpanded = expandedSection == "FINANCIAL GOALS" || query.isNotBlank(), onToggle = { expandedSection = if (expandedSection == "FINANCIAL GOALS") null else "FINANCIAL GOALS" }) {
+                if (matchBudget) VaultSettingsItem(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.Wallet,
+                    title = stringResource(R.string.monthly_budget_title),
+                    value = if (state.monthlyBudget > 0) "${state.currencySymbol}${state.monthlyBudget.toInt()} (${if (state.isDynamicBudgetEnabled) stringResource(R.string.budget_dynamic) else stringResource(R.string.budget_fixed)})" else stringResource(R.string.no_limit_set),
+                    onClick = {
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        showBudgetDialog = true
+                    }
+                )
+            }
+
+            }
+if (matchData) {
+SettingsSection(stringResource(R.string.settings_data_backup), icon = LucideIcons.Database, isHapticsEnabled = state.isHapticsEnabled, isExpanded = expandedSection == "DATA & BACKUP" || query.isNotBlank(), onToggle = { expandedSection = if (expandedSection == "DATA & BACKUP") null else "DATA & BACKUP" }) {
+                if (matchCsv) VaultSettingsItem(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.FileSpreadsheet,
+                    title = stringResource(R.string.export_csv_title),
+                    onClick = {
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        csvExportLauncher.launch("Cipher_Report_${System.currentTimeMillis()}.csv")
+                    },
+                    loading = state.isExportingCsv
+                )
+                if (matchPdf) VaultSettingsItem(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.FileText,
+                    title = stringResource(R.string.export_pdf_title),
+                    subtitle = if (!state.isPro) "Executive breakdown statement • Pro" else "Executive monthly breakdown statement",
+                    badge = if (!state.isPro) {
+                        {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFF59E0B).copy(alpha = 0.16f))
+                                    .border(0.8.dp, Color(0xFFF59E0B).copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "PRO",
+                                    style = Typography.labelSmall.copy(
+                                        fontFamily = Lato,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp,
+                                        letterSpacing = 0.5.sp
+                                    ),
+                                    color = Color(0xFFF59E0B)
+                                )
+                            }
+                        }
+                    } else null,
+                    onClick = {
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        if (state.isPro) {
+                            pdfExportLauncher.launch("Cipher_Statement_${System.currentTimeMillis()}.pdf")
+                        } else {
+                            showPdfUpsellSheet = true
+                        }
+                    },
+                    loading = state.isExportingPdf
+                )
+                if (matchBackup) VaultSettingsItem(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.CloudUpload,
+                    title = stringResource(R.string.backup_vault_title),
+                    onClick = {
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        exportLauncher.launch("Cipher_Backup_${System.currentTimeMillis()}.cipher")
+                    },
+                    loading = state.isExporting
+                )
+                if (matchRestore) VaultSettingsItem(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.CloudDownload,
+                    title = stringResource(R.string.restore_vault_title),
+                    onClick = {
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        importLauncher.launch(arrayOf("application/octet-stream"))
+                    },
+                    loading = state.isImporting
+                )
+                if (matchClear) VaultSettingsItem(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.Trash2,
+                    title = stringResource(R.string.clear_all_data_title),
+                    titleColor = RoseExpense,
+                    onClick = {
+                        view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                        showDeleteDialog = true
+                    }
+                )
+            
+                if (matchAutoBackup) VaultSettingsSwitch(
+                    isHapticsEnabled = state.isHapticsEnabled,
+                    icon = LucideIcons.FolderSync,
+                    title = stringResource(R.string.enable_auto_backup_title),
+                    description = stringResource(R.string.enable_auto_backup_desc),
+                    checked = state.autoBackupEnabled,
+                    onCheckedChange = { 
+                        if (it) {
+                            showAutoBackupPasswordSetupDialog = true
+                        } else {
+                            viewModel.handleIntent(SettingsContract.Intent.SetAutoBackupEnabled(false))
+                        }
+                    }
+                )
+                if (state.autoBackupEnabled) {
+                    val freqLabel = when (state.autoBackupFrequency) {
+                        AutoBackupFrequency.NEVER -> stringResource(R.string.freq_never)
+                        AutoBackupFrequency.EVERY_CHANGE -> stringResource(R.string.freq_every_change)
+                        AutoBackupFrequency.DAILY -> stringResource(R.string.freq_daily)
+                        AutoBackupFrequency.WEEKLY -> stringResource(R.string.freq_weekly)
+                    }
+                    if (matchFreq) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.CalendarClock,
+                        title = stringResource(R.string.backup_frequency_title),
+                        value = freqLabel,
+                        onClick = {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            showFrequencyDialog = true
+                        }
+                    )
+                    if (matchAutoBackup) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.Eye,
+                        title = stringResource(R.string.show_backup_password_title),
+                        onClick = {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            if (biometricAuthenticator.isBiometricAvailable()) {
+                                biometricAuthenticator.authenticate(
+                                    activity = context as FragmentActivity,
+                                    onSuccess = { viewModel.handleIntent(SettingsContract.Intent.RevealAutoBackupPassword) },
+                                    onError = { },
+                                    title = revealPasswordPromptTitle,
+                                    subtitle = revealPasswordPromptSubtitle
+                                )
+                            } else {
+                                viewModel.handleIntent(SettingsContract.Intent.RevealAutoBackupPassword)
+                            }
+                        }
+                    )
+                    if (matchLoc) VaultSettingsItem(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.FolderDown,
+                        title = stringResource(R.string.backup_location_title),
+                        subtitle = if (state.autoBackupUri != null) {
+                            val readablePath = try {
+                                val decodedPath = Uri.decode(state.autoBackupUri)
+                                decodedPath.substringAfter("tree/", decodedPath)
+                                    .replace("primary:", "Internal Storage/")
+                            } catch (_: Exception) {
+                                ""
+                            }
+                            stringResource(R.string.folder_selected_prefix, readablePath)
+                        } else stringResource(R.string.tap_select_folder),
+                        onClick = {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            autoBackupFolderLauncher.launch(null)
+                        }
+                    )
+                }
+            }
+
+            }
+if (matchAbout) {
+SettingsSection(stringResource(R.string.settings_about_support), icon = LucideIcons.Info, isHapticsEnabled = state.isHapticsEnabled, isExpanded = expandedSection == "ABOUT & SUPPORT" || query.isNotBlank(), onToggle = { expandedSection = if (expandedSection == "ABOUT & SUPPORT") null else "ABOUT & SUPPORT" }) {
+                if (matchRate) VaultSettingsItem(
+                    icon = LucideIcons.Star,
+                    title = stringResource(R.string.rate_play_store_title),
+                    subtitle = stringResource(R.string.rate_play_store_desc),
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, "market://details?id=com.masum.cipher".toUri()))
+                        } catch (_: android.content.ActivityNotFoundException) {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    "https://play.google.com/store/apps/details?id=com.masum.cipher".toUri()))
+                        }
+                    }
+                )
+                if (matchFeedback) VaultSettingsItem(
+                    icon = LucideIcons.MessagesSquare,
+                    title = stringResource(R.string.feedback_title),
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, "https://tally.so/r/gDz7NK".toUri())
+                        context.startActivity(intent)
+                    }
+                )
+                if (matchUpdate) VaultSettingsItem(
+                    icon = LucideIcons.RefreshCw,
+                    title = stringResource(R.string.check_updates_title),
+                    subtitle = if (state.isInstalledFromPlayStore) stringResource(R.string.check_updates_desc) else "Check for the latest updates on GitHub",
+                    loading = state.isCheckingUpdate,
+                    onClick = {
+                        if (state.isInstalledFromPlayStore) {
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, "market://details?id=com.masum.cipher".toUri()))
+                            } catch (_: android.content.ActivityNotFoundException) {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, "https://play.google.com/store/apps/details?id=com.masum.cipher".toUri()))
+                            }
+                        } else {
+                            viewModel.handleIntent(SettingsContract.Intent.CheckForAppUpdates)
+                        }
+                    }
+                )
+                if (matchCrash) VaultSettingsItem(
+                    icon = LucideIcons.Bug,
+                    title = stringResource(R.string.diagnostics_title),
+                    subtitle = stringResource(R.string.diagnostics_desc),
+                    onClick = { showCrashLogDialog = true }
+                )
+                if (matchContact) VaultSettingsItem(
+                    icon = LucideIcons.Mail,
+                    title = stringResource(R.string.contact_dev_title),
+                    subtitle = "skmasumali.dev@gmail.com",
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = "mailto:skmasumali.dev@gmail.com".toUri()
+                            putExtra(Intent.EXTRA_SUBJECT, "Hello from Cipher App!")
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Send Email"))
+                    }
+                )
+            
+                if (matchSource) VaultSettingsItem(
+                    icon = LucideIcons.Github,
+                    title = stringResource(R.string.open_source_title),
+                    subtitle = "github.com/insaneodyssey26/cipher",
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW,
+                            "https://github.com/insaneodyssey26/cipher".toUri())
+                        context.startActivity(intent)
+                    }
+                )
+                if (matchPrivacyPol) VaultSettingsItem(
+                    icon = LucideIcons.ShieldCheck,
+                    title = stringResource(R.string.privacy_terms_title),
+                    onClick = onNavigateToPrivacy
+                )
+                if (matchSupportDev) VaultSettingsItem(
+                    icon = LucideIcons.Coffee,
+                    title = stringResource(R.string.support_dev_title),
+                    subtitle = "ko-fi.com/insane_odyssey",
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW,
+                            "https://ko-fi.com/insane_odyssey".toUri())
+                        context.startActivity(intent)
+                    }
+                )
+            }
+
+            }
+Spacer(modifier = Modifier.weight(1f))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = false)
+                            showWhatsNewSheet = true
+                        }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                            .border(
+                                width = 0.75.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                                shape = RoundedCornerShape(11.dp)
+                            )
+                            .padding(5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_cipher_logo_mono),
+                            contentDescription = "Cipher Logo",
+                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column {
+                        Text(
+                            text = "cipher.",
+                            style = Typography.titleLarge.copy(
+                                fontFamily = DMSans,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = (-0.4).sp,
+                                fontSize = 20.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        val versionName = try {
+                            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                        } catch (_: Exception) {
+                            "4.1.0"
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Version $versionName",
+                                style = Typography.labelSmall.copy(
+                                    fontFamily = Lato,
+                                    fontSize = 11.5.sp
+                                ),
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(3.dp)
+                                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape)
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_tap_for_whats_new),
+                                style = Typography.labelSmall.copy(
+                                    fontFamily = Lato,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+
+    if (showWhatsNewSheet) {
+        WhatsNewSheet(
+            onDismiss = { showWhatsNewSheet = false },
+            onContinue = { showWhatsNewSheet = false }
+        )
+    }
+
+    state.updateCheckResult?.let { updateInfo ->
+        if (updateInfo.isUpdateAvailable) {
+            AlertDialog(
+                onDismissRequest = {
+                    if (state.downloadPercent == null) {
+                        viewModel.handleIntent(SettingsContract.Intent.DismissUpdateDialog)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .padding(vertical = 16.dp),
+                shape = RoundedCornerShape(24.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                title = {
+                    Column {
+                        Text(
+                            text = "Update Available",
+                            style = Typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "v${updateInfo.latestVersion} is ready (Current: v${updateInfo.currentVersion})",
+                            style = Typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (updateInfo.changelog.isNotBlank()) {
+                            Text(
+                                text = "What's New:",
+                                style = Typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(280.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .padding(16.dp)
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                com.masum.cipher.ui.components.MarkdownChangelogView(
+                                    markdownText = updateInfo.changelog
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        if (state.downloadPercent != null) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Downloading update...",
+                                        style = Typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "${state.downloadPercent}%",
+                                        style = Typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                androidx.compose.material3.LinearProgressIndicator(
+                                    progress = { (state.downloadPercent ?: 0) / 100f },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    if (state.downloadPercent == null) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Update via",
+                                style = Typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                if (!updateInfo.downloadUrl.isNullOrBlank()) {
+                                    Button(
+                                        onClick = {
+                                            view.performVibrate(state.isHapticsEnabled)
+                                            try {
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, updateInfo.downloadUrl.toUri()))
+                                            } catch (_: Exception) {}
+                                            viewModel.handleIntent(SettingsContract.Intent.DismissUpdateDialog)
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                        ),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                            contentColor = MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = LucideIcons.Github,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "GitHub",
+                                            style = Typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                                        )
+                                    }
+                                }
+
+                                Button(
+                                    onClick = {
+                                        view.performVibrate(state.isHapticsEnabled)
+                                        try {
+                                            context.startActivity(Intent(Intent.ACTION_VIEW, "market://details?id=com.masum.cipher".toUri()))
+                                        } catch (_: android.content.ActivityNotFoundException) {
+                                            context.startActivity(Intent(Intent.ACTION_VIEW, "https://play.google.com/store/apps/details?id=com.masum.cipher".toUri()))
+                                        }
+                                        viewModel.handleIntent(SettingsContract.Intent.DismissUpdateDialog)
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    ),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_play_store),
+                                        contentDescription = null,
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Play Store",
+                                        style = Typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                }
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    view.performVibrate(state.isHapticsEnabled)
+                                    viewModel.handleIntent(SettingsContract.Intent.DismissUpdateDialog)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Later", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                },
+                dismissButton = {}
+            )
+        }
+    }
+
+    if (showCrashLogDialog) {
+        val crashLog = com.masum.cipher.core.util.CrashReporter.getCrashLog(context)
+        AlertDialog(
+            onDismissRequest = { showCrashLogDialog = false },
+            title = { 
+                Text(
+                    text = "App Diagnostics",
+                    style = Typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                ) 
+            },
+            text = {
+                if (crashLog == null) {
+                    Text(
+                        text = "No crashes have been recorded. Cipher is running smoothly!",
+                        style = Typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Column {
+                        Text(
+                            text = "A crash was recorded. You can copy it below.",
+                            style = Typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .padding(12.dp)
+                        ) {
+                            androidx.compose.foundation.lazy.LazyColumn {
+                                item {
+                                    Text(
+                                        text = crashLog,
+                                        style = Typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (crashLog != null) {
+                    TextButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("Crash Log", crashLog)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
+                            showCrashLogDialog = false
+                        }
+                    ) {
+                        Text("COPY LOG", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            },
+            dismissButton = {
+                Row {
+                    if (crashLog != null) {
+                        TextButton(
+                            onClick = {
+                                com.masum.cipher.core.util.CrashReporter.clearCrashLog(context)
+                                Toast.makeText(context, "Crash log cleared", Toast.LENGTH_SHORT).show()
+                                showCrashLogDialog = false
+                            }
+                        ) {
+                            Text("CLEAR", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    TextButton(onClick = { showCrashLogDialog = false }) {
+                        Text(if (crashLog == null) "OK" else "CLOSE", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showPdfUpsellSheet) {
+        ProFeatureGateSheet(
+            featureTitle = "Executive PDF Statements",
+            featureTagline = "Generate high-resolution monthly financial reports with category charts and spend analysis.",
+            featureIcon = LucideIcons.FileText,
+            perks = listOf(
+                ProFeaturePerk(
+                    title = "Category Breakdown Charts",
+                    description = "Visual distribution graphs of your spending across food, bills, shopping, and transfers."
+                ),
+                ProFeaturePerk(
+                    title = "Ready for Records & Taxes",
+                    description = "Clean, professional document formatting for expense filing or accounting."
+                ),
+                ProFeaturePerk(
+                    title = "CSV Export Remains Free",
+                    description = "Standard spreadsheet data export is always available for free anytime."
+                )
+            ),
+            isHapticsEnabled = state.isHapticsEnabled,
+            primaryButtonText = "Get Cipher Pro",
+            secondaryButtonText = "Export as CSV instead",
+            onSecondaryAction = {
+                csvExportLauncher.launch("Cipher_Report_${System.currentTimeMillis()}.csv")
+            },
+            onNavigateToPro = onNavigateToPro,
+            onDismiss = { showPdfUpsellSheet = false }
+        )
+    }
+
+    if (showAccentColorsGateSheet) {
+        ProFeatureGateSheet(
+            featureTitle = stringResource(R.string.pro_gate_accent_colors_title),
+            featureTagline = stringResource(R.string.pro_gate_accent_colors_desc),
+            featureIcon = LucideIcons.Palette,
+            perks = listOf(
+                ProFeaturePerk(
+                    title = "18 Designer Accent Themes",
+                    description = "Personalize your dashboard and cards with curated Pantone and luxury tones."
+                ),
+                ProFeaturePerk(
+                    title = "Dynamic Material Match",
+                    description = "Rich contrast harmonized for both dark and light AMOLED themes."
+                ),
+                ProFeaturePerk(
+                    title = "Lifetime Access",
+                    description = "Unlock all current and future designer theme palettes permanently."
+                )
+            ),
+            isHapticsEnabled = state.isHapticsEnabled,
+            primaryButtonText = "Unlock with Cipher Pro",
+            onNavigateToPro = {
+                showAccentColorsGateSheet = false
+                onNavigateToPro()
+            },
+            onDismiss = { showAccentColorsGateSheet = false }
+        )
+    }
+
+    if (showBudgetDialog) {
+        com.masum.cipher.ui.components.EditBudgetDialog(
+            currentBudget = state.monthlyBudget,
+            isDynamicBudget = state.isDynamicBudgetEnabled,
+            currentMonthIncome = state.thisMonthIncome,
+            accounts = state.accounts,
+            selectedAccountId = state.budgetAccountId,
+            onDismiss = { showBudgetDialog = false },
+            onConfirm = { amount, isDynamic, accountId ->
+                viewModel.handleIntent(SettingsContract.Intent.SetMonthlyBudget(amount, isDynamic, accountId))
+                showBudgetDialog = false
+            },
+            isHapticsEnabled = state.isHapticsEnabled
+        )
+    }
+    if (showFrequencyDialog) {
+        VaultSettingsDialog(
+            title = stringResource(R.string.backup_frequency_title),
+            onDismiss = { showFrequencyDialog = false },
+            confirmText = stringResource(R.string.action_close),
+            showDismissButton = false,
+            onConfirm = { showFrequencyDialog = false }
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AutoBackupFrequency.entries.forEach { freq ->
+                    val label = when (freq) {
+                        AutoBackupFrequency.NEVER -> stringResource(R.string.freq_never)
+                        AutoBackupFrequency.EVERY_CHANGE -> stringResource(R.string.freq_every_change)
+                        AutoBackupFrequency.DAILY -> stringResource(R.string.freq_daily)
+                        AutoBackupFrequency.WEEKLY -> stringResource(R.string.freq_weekly)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                view.performVibrate(state.isHapticsEnabled)
+                                viewModel.handleIntent(SettingsContract.Intent.SetAutoBackupFrequency(freq))
+                                showFrequencyDialog = false
+                            }
+                            .padding(vertical = 12.dp, horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = label, style = Typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        if (state.autoBackupFrequency == freq) {
+                            Icon(LucideIcons.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showBackupPasswordDialog != null) {
+        val isExport = showBackupPasswordDialog == BackupAction.EXPORT
+        VaultSettingsDialog(
+            title = if (isExport) stringResource(R.string.set_backup_password_title) else stringResource(R.string.enter_backup_password_title),
+            onDismiss = {
+                showBackupPasswordDialog = null
+                backupPassword = ""
+                restoreClearExisting = false
+            },
+            confirmText = if (isExport) stringResource(R.string.action_export) else stringResource(R.string.action_import),
+            onConfirm = {
+                val uri = pendingUri
+                if (uri != null && backupPassword.isNotBlank()) {
+                    if (showBackupPasswordDialog == BackupAction.EXPORT) {
+                        viewModel.handleIntent(SettingsContract.Intent.ExportData(uri, backupPassword.toCharArray()))
+                    } else {
+                        viewModel.handleIntent(SettingsContract.Intent.ImportData(uri, backupPassword.toCharArray(), restoreClearExisting))
+                    }
+                }
+                showBackupPasswordDialog = null
+                backupPassword = ""
+                restoreClearExisting = false
+            }
+        ) {
+            Column {
+                Text(
+                    text = if (isExport) 
+                        stringResource(R.string.backup_password_export_desc) 
+                        else stringResource(R.string.backup_password_import_desc),
+                    style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = if (isExport) 8.dp else 16.dp)
+                )
+                if (isExport) {
+                    BackupPasswordWarning(modifier = Modifier.padding(bottom = 16.dp))
+                }
+                OutlinedTextField(
+                    value = backupPassword,
+                    onValueChange = { backupPassword = it },
+                    label = { Text(stringResource(R.string.password_label)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (!isExport) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        RestoreOptionCard(
+                            title = stringResource(R.string.restore_mode_merge_title),
+                            description = stringResource(R.string.restore_mode_merge_desc),
+                            icon = LucideIcons.FolderSync,
+                            isSelected = !restoreClearExisting,
+                            onClick = { restoreClearExisting = false }
+                        )
+                        RestoreOptionCard(
+                            title = stringResource(R.string.restore_mode_clean_title),
+                            description = stringResource(R.string.restore_mode_clean_desc),
+                            icon = LucideIcons.RefreshCw,
+                            isSelected = restoreClearExisting,
+                            onClick = { restoreClearExisting = true }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showTimeoutDialog) {
+        VaultSettingsDialog(
+            title = stringResource(R.string.auto_lock_timer_title),
+            onDismiss = { showTimeoutDialog = false },
+            confirmText = stringResource(R.string.action_close),
+            showDismissButton = false,
+            onConfirm = { showTimeoutDialog = false }
+        ) {
+            Column {
+                timeoutOptions.forEach { (label, value) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            viewModel.handleIntent(SettingsContract.Intent.SetAutoLockTimeout(value))
+                            showTimeoutDialog = false
+                        }.padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = state.autoLockTimeout == value, onClick = null)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = label, style = Typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        VaultSettingsDialog(
+            title = stringResource(R.string.delete_all_data_dialog_title),
+            onDismiss = { showDeleteDialog = false },
+            confirmText = stringResource(R.string.action_clear_everything),
+            confirmColor = RoseExpense,
+            onConfirm = {
+                viewModel.handleIntent(SettingsContract.Intent.ClearAllData)
+                showDeleteDialog = false
+            }
+        ) {
+            Text(stringResource(R.string.delete_all_data_dialog_desc), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+
+    if (showAutoBackupPasswordSetupDialog) {
+        VaultSettingsDialog(
+            title = stringResource(R.string.auto_backup_password_title),
+            onDismiss = { 
+                showAutoBackupPasswordSetupDialog = false 
+                autoBackupSetupPassword = ""
+            },
+            confirmText = stringResource(R.string.action_enable),
+            onConfirm = {
+                if (autoBackupSetupPassword.length >= 4) {
+                    viewModel.handleIntent(SettingsContract.Intent.SetAutoBackupEncryptedPassword(autoBackupSetupPassword))
+                    viewModel.handleIntent(SettingsContract.Intent.SetAutoBackupEnabled(true))
+                    showAutoBackupPasswordSetupDialog = false
+                    autoBackupSetupPassword = ""
+                }
+            }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.auto_backup_password_desc),
+                    style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                BackupPasswordWarning(modifier = Modifier.padding(bottom = 16.dp))
+                OutlinedTextField(
+                    value = autoBackupSetupPassword,
+                    onValueChange = { autoBackupSetupPassword = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.backup_password_placeholder)) },
+                    singleLine = true,
+                    textStyle = Typography.bodyLarge,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+            }
+        }
+    }
+
+    state.revealedAutoBackupPassword?.let { revealedPassword ->
+        VaultSettingsDialog(
+            title = stringResource(R.string.backup_password_dialog_title),
+            onDismiss = { viewModel.handleIntent(SettingsContract.Intent.HideAutoBackupPassword) },
+            confirmText = stringResource(R.string.action_close),
+            showDismissButton = false,
+            onConfirm = { viewModel.handleIntent(SettingsContract.Intent.HideAutoBackupPassword) }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = revealedPassword,
+                    style = Typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                BackupPasswordWarning()
+            }
+        }
+    }
+
+    if (showPermissionsHealthSheet) {
+        PermissionsHealthSheet(
+            onDismiss = { showPermissionsHealthSheet = false },
+            isHapticsEnabled = state.isHapticsEnabled
+        )
+    }
+
+    if (showCurrencyDialog) {
+        com.masum.cipher.ui.components.CurrencySelectionDialog(
+            currentCode = state.currencyCode,
+            currentSymbol = state.currencySymbol,
+            isHapticsEnabled = state.isHapticsEnabled,
+            onCurrencySelected = { code, symbol ->
+                viewModel.handleIntent(SettingsContract.Intent.SetCurrency(code, symbol))
+            },
+            onDismiss = { showCurrencyDialog = false }
+        )
+    }
+
+    if (showLanguageDialog) {
+        com.masum.cipher.ui.components.LanguageSelectionDialog(
+            currentLanguageCode = state.appLanguage,
+            isHapticsEnabled = state.isHapticsEnabled,
+            onLanguageSelected = { code ->
+                viewModel.handleIntent(SettingsContract.Intent.SetAppLanguage(code))
+            },
+            onDismiss = { showLanguageDialog = false }
+        )
+    }
+
+    if (showProSheet) {
+        com.masum.cipher.ui.components.CipherProSheet(
+            isPro = state.isPro,
+            proTier = state.proTier,
+            isActivating = state.isActivatingPro,
+            activationError = state.proActivationError,
+            activationSuccess = state.proActivationSuccess,
+            isHapticsEnabled = state.isHapticsEnabled,
+            onActivateKey = { key, email ->
+                viewModel.handleIntent(SettingsContract.Intent.ActivatePro(key, email))
+            },
+            onDismiss = { showProSheet = false }
+        )
+    }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    isExpanded: Boolean = true,
+    isHapticsEnabled: Boolean = true,
+    onToggle: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    
+    LaunchedEffect(isExpanded) {
+        if (isExpanded) {
+            kotlinx.coroutines.delay(100.milliseconds)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+
+    VaultCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(enabled = onToggle != null, onClick = { 
+                view.performVibrate(isHapticsEnabled)
+                onToggle?.invoke() 
+            }),
+        contentPadding = 0.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp).padding(end = 16.dp)
+                        )
+                    }
+                    Text(
+                        text = title.lowercase().replaceFirstChar { it.uppercase() },
+                        style = Typography.titleMedium.copy(
+                            fontFamily = Lato,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.5.sp,
+                            fontSize = 15.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                
+                if (onToggle != null) {
+                    val rotation by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = if (isExpanded) 180f else 0f
+                    )
+                    Icon(
+                        imageVector = LucideIcons.ChevronDown,
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer { rotationZ = rotation }
+                    )
+                }
+            }
+            
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isExpanded,
+                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    content = content
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VaultSettingsItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String? = null,
+    value: String? = null,
+    badge: @Composable (() -> Unit)? = null,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit,
+    loading: Boolean = false,
+    isHapticsEnabled: Boolean = true
+) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable {
+            view.performVibrate(isHapticsEnabled)
+            onClick()
+        }.padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = titleColor.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(text = title, style = Typography.titleSmall, color = titleColor)
+                badge?.invoke()
+            }
+            if (subtitle != null) {
+                Text(text = subtitle, style = Typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (loading) {
+            Spacer(modifier = Modifier.width(16.dp))
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+        } else if (value != null) {
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = value, style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(LucideIcons.ChevronRight, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp).padding(start = 4.dp))
+        }
+    }
+}
+
+@Composable
+private fun VaultSettingsSwitch(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    isHapticsEnabled: Boolean = true
+) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = Typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = description, style = Typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = {
+                view.performVibrate(isHapticsEnabled)
+                onCheckedChange(it)
+            },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+            )
+        )
+    }
+}
+
+@Composable
+private fun VaultSettingsDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    confirmText: String,
+    confirmColor: Color = MaterialTheme.colorScheme.primary,
+    showDismissButton: Boolean = true,
+    onConfirm: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        title = { Text(title, style = Typography.titleLarge, color = MaterialTheme.colorScheme.onSurface) },
+        text = {
+            Box(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                content()
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = confirmColor)) {
+                Text(confirmText, color = MaterialTheme.colorScheme.onSurface)
+            }
+        },
+        dismissButton = if (showDismissButton) {
+            { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        } else null
+    )
+}
+
+private enum class BackupAction { EXPORT, IMPORT }
+
+@Composable
+private fun RestoreOptionCard(
+    title: String,
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val animatedBorder by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+        label = "restoreBorder"
+    )
+    val animatedBackground by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+        label = "restoreBg"
+    )
+    val iconTint by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "restoreIcon"
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(animatedBackground)
+            .border(width = if (isSelected) 1.5.dp else 1.dp, color = animatedBorder, shape = RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = Typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = Typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .border(
+                    width = 1.5.dp,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isSelected) {
+                Icon(
+                    imageVector = LucideIcons.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(13.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeOptionCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+    val contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+
+    Box(
+        modifier = modifier
+            .background(backgroundColor, RoundedCornerShape(12.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                icon,
+                contentDescription = title,
+                tint = contentColor,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = title,
+                style = Typography.labelMedium,
+                color = contentColor,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PermissionsHealthSheet(
+    onDismiss: () -> Unit,
+    isHapticsEnabled: Boolean
+) {
+    val context = LocalContext.current
+    val view = androidx.compose.ui.platform.LocalView.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    var hasNotificationAccess by remember { 
+        mutableStateOf(androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)) 
+    }
+    var hasPostNotifications by remember { 
+        mutableStateOf(
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) 
+                androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            else true
+        ) 
+    }
+    var hasSmsPermission by remember {
+        mutableStateOf(androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasPostNotifications = isGranted
+    }
+    
+    val smsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasSmsPermission = permissions[android.Manifest.permission.RECEIVE_SMS] == true
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                hasNotificationAccess = androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+                hasSmsPermission = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    hasPostNotifications = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.permissions_health_title),
+                style = Typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.permissions_health_subtitle),
+                style = Typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+
+            HealthItemCard(
+                title = stringResource(R.string.perm_notification_access_title),
+                description = stringResource(R.string.perm_notification_access_desc),
+                isGranted = hasNotificationAccess,
+                icon = LucideIcons.BellRing,
+                onFixClick = {
+                    view.performVibrate(isHapticsEnabled)
+                    context.startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            HealthItemCard(
+                title = stringResource(R.string.perm_sms_access_title),
+                description = stringResource(R.string.perm_sms_access_desc),
+                isGranted = hasSmsPermission,
+                icon = LucideIcons.MessageSquare,
+                onFixClick = {
+                    view.performVibrate(isHapticsEnabled)
+                    smsLauncher.launch(arrayOf(android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS))
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                HealthItemCard(
+                    title = stringResource(R.string.perm_app_notifications_title),
+                    description = stringResource(R.string.perm_app_notifications_desc),
+                    isGranted = hasPostNotifications,
+                    icon = LucideIcons.MessageSquare,
+                    onFixClick = {
+                        view.performVibrate(isHapticsEnabled)
+                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text(stringResource(R.string.action_done), style = Typography.titleMedium, color = MaterialTheme.colorScheme.onPrimary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthItemCard(
+    title: String,
+    description: String,
+    isGranted: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onFixClick: () -> Unit
+) {
+    val backgroundColor = if (isGranted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.errorContainer
+    val iconTint = if (isGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    
+    VaultCard(backgroundColor = backgroundColor) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(if (isGranted) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = Typography.titleSmall, color = if (isGranted) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)
+                Text(description, style = Typography.bodySmall, color = if (isGranted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            if (isGranted) {
+                Icon(
+                    imageVector = LucideIcons.Check,
+                    contentDescription = stringResource(R.string.status_granted),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Button(
+                    onClick = onFixClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(stringResource(R.string.action_fix), color = MaterialTheme.colorScheme.onError, style = Typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackupPasswordWarning(modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(R.string.backup_password_warning),
+        style = Typography.bodySmall,
+        color = MaterialTheme.colorScheme.error,
+        modifier = modifier
+    )
+}

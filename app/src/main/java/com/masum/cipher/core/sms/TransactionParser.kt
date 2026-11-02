@@ -1,0 +1,206 @@
+package com.masum.cipher.core.sms
+
+import com.masum.cipher.core.domain.model.ParsedTransaction
+import com.masum.cipher.core.ml.MessageIntentClassifier
+import com.masum.cipher.core.sms.config.TransactionPatterns
+import com.masum.cipher.core.sms.region.RegionParserRules
+import com.masum.cipher.core.sms.region.RegionRuleProvider
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class TransactionParser @Inject constructor(
+    private val intentClassifier: MessageIntentClassifier
+) {
+
+    constructor() : this(object : MessageIntentClassifier {
+        override fun classify(message: String): com.masum.cipher.core.ml.IntentClassificationResult {
+            return com.masum.cipher.core.ml.IntentClassificationResult(
+                intent = com.masum.cipher.core.ml.MessageIntent.TRANSACTION_EXPENSE,
+                confidence = 0.5f,
+                probabilities = emptyMap()
+            )
+        }
+    })
+
+    fun parse(message: String, preferredCurrency: String? = null): ParsedTransaction? {
+        val cleanMessage = message.replace(MULTI_SPACE_REGEX, " ")
+
+        val result = intentClassifier.classify(cleanMessage)
+        if (result.confidence >= 0.70f && (result.isPromotional || result.isInformational)) {
+            return null
+        }
+
+        val ruleChain = RegionRuleProvider.getAllRules(preferredCurrency ?: "INR")
+
+        for (rules in ruleChain) {
+            val parsed = tryParseWithRules(cleanMessage, rules)
+            if (parsed != null) return parsed
+        }
+
+        return null
+    }
+
+    private fun tryParseWithRules(message: String, rules: RegionParserRules): ParsedTransaction? {
+        if (hasExclusionKeywords(message, rules)) return null
+        if (!hasTransactionIntent(message, rules)) return null
+        if (!hasTransactionEvidence(message, rules)) return null
+
+        val amount = extractAmount(message, rules) ?: return null
+
+        var merchant = extractP2PSender(message)
+        if (merchant == null) merchant = findBrandInText(message, rules)
+        if (merchant == null) merchant = extractMerchantStructural(message, rules)
+
+        val isDebit = TransactionPatterns.DEBIT_KEYWORDS.any { message.contains(it, ignoreCase = true) }
+        val isCredit = TransactionPatterns.CREDIT_KEYWORDS.any { message.contains(it, ignoreCase = true) }
+        val classification = intentClassifier.classify(message)
+        val isIncome = when {
+            classification.confidence >= 0.70f && classification.isIncome -> true
+            classification.confidence >= 0.70f && classification.isExpense -> false
+            else -> isCredit && !isDebit
+        }
+        val accountLast4 = extractAccountLast4(message)
+
+        return ParsedTransaction(
+            amount = amount,
+            merchant = sanitizeMerchant(merchant ?: "Miscellaneous"),
+            currency = rules.defaultCurrency,
+            isIncome = isIncome,
+            accountLast4 = accountLast4
+        )
+    }
+
+    private fun hasExclusionKeywords(message: String, rules: RegionParserRules): Boolean {
+        val lower = message.lowercase()
+        if (rules.exclusionKeywords.any { lower.contains(it) }) return true
+        if (TransactionPatterns.PROMOTIONAL_PATTERNS.any { it.matcher(message).find() }) return true
+        return false
+    }
+
+    private fun hasTransactionIntent(message: String, rules: RegionParserRules): Boolean {
+        val lower = message.lowercase()
+        return rules.intentKeywords.any { keyword ->
+            if (keyword.all { it.isLetterOrDigit() } && keyword.length <= 3) {
+                Regex("\\b${Regex.escape(keyword)}\\b", RegexOption.IGNORE_CASE).containsMatchIn(message)
+            } else {
+                lower.contains(keyword.lowercase())
+            }
+        }
+    }
+
+    private fun hasTransactionEvidence(message: String, rules: RegionParserRules): Boolean {
+        return rules.evidencePatterns.any { pattern ->
+            pattern.matcher(message).find()
+        }
+    }
+
+    private fun extractAmount(message: String, rules: RegionParserRules): Double? {
+        for (pattern in rules.amountPatterns) {
+            val matcher = pattern.matcher(message)
+            while (matcher.find()) {
+                val match = matcher.group(1) ?: matcher.group(0)
+                if (isPartOfAccountNumber(message, matcher.start())) continue
+                if (isPrecededByPromotionalQualifier(message, matcher.start())) continue
+
+                val numeric = match.replace(",", "").replace(NUMERIC_CLEANUP, "")
+                val value = numeric.toDoubleOrNull() ?: continue
+
+                if (value <= 0) continue
+                if (value > 1_000_000 && !match.contains(".")) continue
+
+                return value
+            }
+        }
+        return null
+    }
+
+    private fun isPrecededByPromotionalQualifier(message: String, matchStart: Int): Boolean {
+        val precedingText = message.substring(maxOf(0, matchStart - 35), matchStart)
+        return TransactionPatterns.PROMOTIONAL_AMOUNT_PREFIX_PATTERN.matcher(precedingText).find()
+    }
+
+    private fun isPartOfAccountNumber(message: String, matchStart: Int): Boolean {
+        val matcher = TransactionPatterns.ACCOUNT_EXCLUSION_PATTERN.matcher(message)
+        while (matcher.find()) {
+            if (matchStart >= matcher.start() && matchStart < matcher.end()) return true
+        }
+        return false
+    }
+
+    companion object {
+        private val MULTI_SPACE_REGEX = Regex("\\s+")
+        private val MERCHANT_PREFIX_CLEANUP = Regex("^(?:to|from|payment\\s+to|transfer\\s+to)\\s+", RegexOption.IGNORE_CASE)
+        private val MERCHANT_TRAILING_CLEANUP = Regex("(?i)\\b(?:using|via|on|ref|vpa|upi|card|with|rrn|txn|id|auth|deposited|credited|in|into|for|towards|bank|account|a/c)\\b.*")
+        private val NUMERIC_CLEANUP = Regex("[^\\d.]")
+        private val P2P_SENDER_PATTERNS = listOf(
+            java.util.regex.Pattern.compile("(?i)^([A-Za-z][A-Za-z0-9\\s&.]{1,40}?)\\s+paid\\s+you"),
+            java.util.regex.Pattern.compile("(?i)^([A-Za-z][A-Za-z0-9\\s&.]{1,40}?)\\s+sent\\s+you"),
+            java.util.regex.Pattern.compile("(?i)^([A-Za-z][A-Za-z0-9\\s&.]{1,40}?)\\s+transferred\\s+you"),
+            java.util.regex.Pattern.compile("(?i)received\\s+(?:(?:rs\\.?|inr|₹)?\\s*[\\d,.]+\\s+)?from\\s+([A-Za-z][A-Za-z0-9\\s&.]{1,40}?)(?=\\s+deposited|\\s+credited|\\s+received|\\s+into|\\s+in\\s+your|\\s+on|\\s+using|\\s+via|\\s+ref|\\s+to|\\s+for|\\s+towards|\\s+a/c|\\s+acc|\\s+account|\\s+bank|\\.|$)")
+        )
+    }
+
+    private fun extractP2PSender(message: String): String? {
+        for (pattern in P2P_SENDER_PATTERNS) {
+            val matcher = pattern.matcher(message)
+            if (matcher.find()) {
+                val raw = matcher.group(1)?.trim() ?: continue
+                if (raw.isNotBlank()) {
+                    val cleaned = raw.replace(MERCHANT_PREFIX_CLEANUP, "").trim()
+                    if (cleaned.isNotBlank() && !TransactionPatterns.MERCHANT_FALSE_POSITIVE_PREFIXES.any { cleaned.lowercase().startsWith(it) }) {
+                        return cleaned
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private fun findBrandInText(message: String, rules: RegionParserRules): String? {
+        val upper = message.uppercase()
+        return rules.brandDictionary
+            .sortedByDescending { it.length }
+            .find { brand ->
+                upper.contains(Regex("\\b${Regex.escape(brand)}\\b"))
+            }
+    }
+
+    private fun extractMerchantStructural(message: String, rules: RegionParserRules): String? {
+        for (pattern in rules.structuralMerchantPatterns) {
+            val matcher = pattern.matcher(message)
+            while (matcher.find()) {
+                val raw = matcher.group(1)?.trim() ?: continue
+                if (raw.isBlank()) continue
+
+                val lower = raw.lowercase()
+                if (TransactionPatterns.MERCHANT_FALSE_POSITIVE_PREFIXES.any { lower.startsWith(it) }) continue
+
+                val cleaned = raw.replace(MERCHANT_PREFIX_CLEANUP, "").trim()
+
+                if (cleaned.isNotBlank()) return cleaned
+            }
+        }
+        return null
+    }
+
+    private fun extractAccountLast4(message: String): String? {
+        val pattern = java.util.regex.Pattern.compile("(?i)(?:a/c|acct|account|card|ending|ending with|ending in|xx|x{2,}|[*]{2,})\\s*[:#.-]?\\s*[*xX]*(\\d{3,4})\\b")
+        val matcher = pattern.matcher(message)
+        if (matcher.find()) {
+            return matcher.group(1)?.trim()
+        }
+        return null
+    }
+
+    private fun sanitizeMerchant(merchant: String): String {
+        return merchant
+            .replace(MERCHANT_TRAILING_CLEANUP, "")
+            .trim()
+            .split(" ")
+            .filter { it.isNotBlank() }
+            .take(3)
+            .joinToString(" ")
+            .uppercase()
+    }
+}

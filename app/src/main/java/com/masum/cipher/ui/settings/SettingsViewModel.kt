@@ -1,0 +1,442 @@
+package com.masum.cipher.ui.settings
+
+import android.content.Context
+import android.provider.Settings
+import androidx.lifecycle.viewModelScope
+import com.masum.cipher.R
+import com.masum.cipher.core.data.local.dao.TransactionDao
+import com.masum.cipher.core.data.local.pref.AppTheme
+import com.masum.cipher.core.data.local.pref.UserPreferences
+import com.masum.cipher.core.domain.usecase.ClearAllDataUseCase
+import com.masum.cipher.core.domain.usecase.ExportCsvUseCase
+import com.masum.cipher.core.domain.usecase.ExportDataUseCase
+import com.masum.cipher.core.domain.usecase.ExportPdfUseCase
+import com.masum.cipher.core.domain.usecase.ImportDataUseCase
+import com.masum.cipher.core.domain.usecase.UpdateSettingsUseCase
+import com.masum.cipher.core.mvi.BaseViewModel
+import com.masum.cipher.core.security.KeystoreManager
+import com.masum.cipher.core.worker.AutoBackupScheduler
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Calendar
+import javax.inject.Inject
+
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val userPreferences: UserPreferences,
+    private val updateSettingsUseCase: UpdateSettingsUseCase,
+    private val clearAllDataUseCase: ClearAllDataUseCase,
+    private val exportCsvUseCase: ExportCsvUseCase,
+    private val exportPdfUseCase: ExportPdfUseCase,
+    private val exportDataUseCase: ExportDataUseCase,
+    private val importDataUseCase: ImportDataUseCase,
+    private val localNotificationManager: com.masum.cipher.core.notifications.LocalNotificationManager,
+    private val keystoreManager: KeystoreManager,
+    private val autoBackupScheduler: AutoBackupScheduler,
+    private val transactionDao: TransactionDao,
+    private val accountDao: com.masum.cipher.core.data.local.dao.AccountDao,
+    private val licenseEngine: com.masum.cipher.core.security.LicenseEngine
+) : BaseViewModel<SettingsContract.State, SettingsContract.Intent, SettingsContract.Effect>(
+    initialState = SettingsContract.State(
+        currencyCode = userPreferences.getCachedCurrencyCode(),
+        currencySymbol = userPreferences.getCachedCurrencySymbol(),
+        isPro = userPreferences.isCachedPro(),
+        proTier = userPreferences.getCachedProTier(),
+        proExpiresAtEpochMs = userPreferences.getCachedProExpiresAt(),
+        isInstalledFromPlayStore = com.masum.cipher.core.updates.UpdateManager.isInstalledFromPlayStore(context)
+    )
+) {
+
+    init {
+        observeSettings()
+    }
+
+    override fun handleIntent(intent: SettingsContract.Intent) {
+        when (intent) {
+            is SettingsContract.Intent.UpdateTheme -> updateTheme(intent.theme)
+            is SettingsContract.Intent.UpdateAccentColor -> updateAccentColor(intent.color)
+            is SettingsContract.Intent.SetBiometricEnabled -> updateBiometric(intent.enabled)
+            is SettingsContract.Intent.SetPrivacyModeEnabled -> updatePrivacyMode(intent.enabled)
+            is SettingsContract.Intent.SetNotifyAllTransactions -> updateNotifyAllTransactions(intent.enabled)
+            is SettingsContract.Intent.SetNotifyBudgetAlerts -> updateNotifyBudgetAlerts(intent.enabled)
+            is SettingsContract.Intent.SetNotifyDailySummary -> updateNotifyDailySummary(intent.enabled)
+            is SettingsContract.Intent.SetNotifyMonthlyWrapped -> updateNotifyMonthlyWrapped(intent.enabled)
+            is SettingsContract.Intent.SetNotifyUncategorizedReminder -> updateNotifyUncategorizedReminder(intent.enabled)
+            is SettingsContract.Intent.SetNotifySubscriptions -> updateNotifySubscriptions(intent.enabled)
+            is SettingsContract.Intent.SetNotifyNewAppDetected -> updateNotifyNewAppDetected(intent.enabled)
+            is SettingsContract.Intent.SetNotifyAppUpdates -> updateNotifyAppUpdates(intent.enabled)
+            is SettingsContract.Intent.SetHapticsEnabled -> updateHaptics(intent.enabled)
+            is SettingsContract.Intent.SetAutoLockTimeout -> updateAutoLockTimeout(intent.timeout)
+            is SettingsContract.Intent.SetCurrency -> updateCurrency(intent.code, intent.symbol)
+            is SettingsContract.Intent.SetAppLanguage -> updateAppLanguage(intent.languageCode)
+            is SettingsContract.Intent.SetMonthlyBudget -> updateMonthlyBudget(intent.amount, intent.isDynamic, intent.accountId)
+            is SettingsContract.Intent.ClearAllData -> clearAllData()
+            is SettingsContract.Intent.ExportData -> exportData(intent.uri, intent.password)
+            is SettingsContract.Intent.ImportData -> importData(intent.uri, intent.password, intent.clearExisting)
+            is SettingsContract.Intent.ExportCsv -> exportCsv(intent.uri)
+            is SettingsContract.Intent.ExportPdf -> exportPdf(intent.uri)
+            is SettingsContract.Intent.SetAutoBackupEnabled -> updateAutoBackupEnabled(intent.enabled)
+            is SettingsContract.Intent.SetAutoBackupFrequency -> updateAutoBackupFrequency(intent.frequency)
+            is SettingsContract.Intent.SetAutoBackupUri -> updateAutoBackupUri(intent.uri)
+            is SettingsContract.Intent.SetAutoBackupEncryptedPassword -> updateAutoBackupPassword(intent.password)
+            SettingsContract.Intent.RevealAutoBackupPassword -> revealAutoBackupPassword()
+            SettingsContract.Intent.HideAutoBackupPassword -> updateState { copy(revealedAutoBackupPassword = null) }
+            is SettingsContract.Intent.ActivatePro -> activatePro(intent.licenseKey, intent.email)
+            is SettingsContract.Intent.DeactivatePro -> deactivatePro()
+            is SettingsContract.Intent.SetShowProBadge -> updateShowProBadge(intent.enabled)
+            SettingsContract.Intent.CheckForAppUpdates -> checkForAppUpdates()
+            is SettingsContract.Intent.DownloadAndInstallUpdate -> downloadAndInstallUpdate(intent.downloadUrl)
+            SettingsContract.Intent.DismissUpdateDialog -> updateState { copy(updateCheckResult = null, downloadPercent = null, downloadError = null) }
+        }
+    }
+
+    private fun updateShowProBadge(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setShowProBadge(enabled)
+        }
+    }
+
+    private fun observeSettings() {
+        viewModelScope.launch {
+            userPreferences.settingsFlow.collect { settings ->
+                val accounts = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    accountDao.getAllAccounts()
+                }
+                val monthIncome = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val start = Calendar.getInstance().apply {
+                        set(Calendar.DAY_OF_MONTH, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                    if (settings.budgetAccountId != null) {
+                        transactionDao.sumIncomeSinceForAccount(start, settings.budgetAccountId)
+                    } else {
+                        transactionDao.sumIncomeSince(start)
+                    }
+                }
+                updateState {
+                    copy(
+                        theme = settings.theme,
+                        accentColor = settings.accentColor,
+                        isBiometricEnabled = settings.isBiometricEnabled,
+                        isPrivacyModeEnabled = settings.isPrivacyModeEnabled,
+                        notifyAllTransactions = settings.notifyAllTransactions,
+                        notifyBudgetAlerts = settings.notifyBudgetAlerts,
+                        notifyDailySummary = settings.notifyDailySummary,
+                        notifyMonthlyWrapped = settings.notifyMonthlyWrapped,
+                        notifyUncategorizedReminder = settings.notifyUncategorizedReminder,
+                        notifySubscriptions = settings.notifySubscriptions,
+                        notifyNewAppDetected = settings.notifyNewAppDetected,
+                        notifyAppUpdates = settings.notifyAppUpdates,
+                        isHapticsEnabled = settings.isHapticsEnabled,
+                        autoLockTimeout = settings.autoLockTimeout,
+                        currencyCode = settings.currencyCode,
+                        currencySymbol = settings.currencySymbol,
+                        appLanguage = settings.appLanguage,
+                        monthlyBudget = settings.monthlyBudget,
+                        budgetAccountId = settings.budgetAccountId,
+                        accounts = accounts,
+                        isDynamicBudgetEnabled = settings.isDynamicBudgetEnabled,
+                        thisMonthIncome = monthIncome,
+                        autoBackupEnabled = settings.autoBackupEnabled,
+                        autoBackupFrequency = settings.autoBackupFrequency,
+                        autoBackupUri = settings.autoBackupUri,
+                        isPro = settings.isPro,
+                        proTier = settings.proTier,
+                        proExpiresAtEpochMs = settings.proExpiresAtEpochMs,
+                        proLicenseToken = settings.proLicenseToken,
+                        proOrderId = settings.proOrderId,
+                        showProBadge = settings.showProBadge
+                    )
+                }
+            }
+        }
+    }
+
+    private fun updateAppLanguage(languageCode: String) {
+        viewModelScope.launch {
+            userPreferences.setAppLanguage(languageCode)
+            updateState { copy(appLanguage = languageCode) }
+        }
+    }
+
+    private fun updateTheme(theme: AppTheme) {
+        viewModelScope.launch { updateSettingsUseCase.theme(theme) }
+    }
+
+    private fun updateAccentColor(color: com.masum.cipher.core.data.local.pref.AccentColor) {
+        viewModelScope.launch { updateSettingsUseCase.accentColor(color) }
+    }
+
+
+    private fun updateBiometric(enabled: Boolean) {
+        viewModelScope.launch { updateSettingsUseCase.biometric(enabled) }
+    }
+
+    private fun updateNotifyAllTransactions(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifyAllTransactions(enabled)
+            updateState { copy(notifyAllTransactions = enabled) }
+        }
+    }
+
+    private fun updateNotifyBudgetAlerts(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifyBudgetAlerts(enabled)
+            updateState { copy(notifyBudgetAlerts = enabled) }
+        }
+    }
+
+    private fun updateNotifyDailySummary(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifyDailySummary(enabled)
+            updateState { copy(notifyDailySummary = enabled) }
+        }
+    }
+
+    private fun updateNotifyMonthlyWrapped(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifyMonthlyWrapped(enabled)
+            updateState { copy(notifyMonthlyWrapped = enabled) }
+        }
+    }
+
+    private fun updateNotifyUncategorizedReminder(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifyUncategorizedReminder(enabled)
+            updateState { copy(notifyUncategorizedReminder = enabled) }
+        }
+    }
+
+    private fun updateNotifySubscriptions(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifySubscriptions(enabled)
+            updateState { copy(notifySubscriptions = enabled) }
+        }
+    }
+
+    private fun updateNotifyNewAppDetected(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifyNewAppDetected(enabled)
+            updateState { copy(notifyNewAppDetected = enabled) }
+        }
+    }
+
+    private fun updateNotifyAppUpdates(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifyAppUpdates(enabled)
+            updateState { copy(notifyAppUpdates = enabled) }
+        }
+    }
+
+    private fun updatePrivacyMode(enabled: Boolean) {
+        viewModelScope.launch { updateSettingsUseCase.privacyMode(enabled) }
+    }
+
+    private fun updateHaptics(enabled: Boolean) {
+        viewModelScope.launch { updateSettingsUseCase.haptics(enabled) }
+    }
+
+    private fun updateAutoLockTimeout(timeout: Long) {
+        viewModelScope.launch { updateSettingsUseCase.autoLockTimeout(timeout) }
+    }
+
+    private fun updateMonthlyBudget(amount: Double, isDynamic: Boolean, accountId: Long?) {
+        viewModelScope.launch {
+            updateSettingsUseCase.monthlyBudget(amount)
+            updateSettingsUseCase.dynamicBudget(isDynamic)
+            updateSettingsUseCase.budgetAccountId(accountId)
+        }
+    }
+
+    private fun updateAutoBackupEnabled(enabled: Boolean) {
+        viewModelScope.launch { 
+            updateSettingsUseCase.autoBackupEnabled(enabled) 
+            if (!enabled) {
+                autoBackupScheduler.cancelBackup()
+            } else {
+                autoBackupScheduler.scheduleBackup(currentState.autoBackupFrequency)
+            }
+        }
+    }
+
+    private fun updateAutoBackupFrequency(frequency: com.masum.cipher.core.data.local.pref.AutoBackupFrequency) {
+        viewModelScope.launch { 
+            updateSettingsUseCase.autoBackupFrequency(frequency) 
+            if (currentState.autoBackupEnabled) {
+                autoBackupScheduler.scheduleBackup(frequency)
+            }
+        }
+    }
+
+    private fun updateAutoBackupUri(uri: String?) {
+        viewModelScope.launch { updateSettingsUseCase.autoBackupUri(uri) }
+    }
+
+    private fun revealAutoBackupPassword() {
+        viewModelScope.launch {
+            val encrypted = userPreferences.settingsFlow.first().autoBackupEncryptedPassword
+            val password = encrypted?.let { keystoreManager.decrypt(it) }
+            if (password != null) {
+                updateState { copy(revealedAutoBackupPassword = password) }
+            } else {
+                emitEffect(SettingsContract.Effect.ShowToast(context.getString(R.string.backup_password_unavailable)))
+            }
+        }
+    }
+
+    private fun updateAutoBackupPassword(password: String?) {
+        viewModelScope.launch {
+            if (password == null) {
+                updateSettingsUseCase.autoBackupEncryptedPassword(null)
+            } else {
+                val encrypted = keystoreManager.encrypt(password)
+                updateSettingsUseCase.autoBackupEncryptedPassword(encrypted)
+            }
+        }
+    }
+
+    private fun clearAllData() {
+        viewModelScope.launch {
+            clearAllDataUseCase()
+            emitEffect(SettingsContract.Effect.ShowToast("All data cleared successfully"))
+        }
+    }
+
+    private fun exportCsv(uri: android.net.Uri) {
+        viewModelScope.launch {
+            updateState { copy(isExportingCsv = true) }
+            val result = exportCsvUseCase(uri)
+            updateState { copy(isExportingCsv = false) }
+            
+            val message = if (result.isSuccess) "CSV Report generated successfully" else "Failed to export CSV: ${result.exceptionOrNull()?.message}"
+            emitEffect(SettingsContract.Effect.ShowToast(message))
+        }
+    }
+
+    private fun exportPdf(uri: android.net.Uri) {
+        viewModelScope.launch {
+            updateState { copy(isExportingPdf = true) }
+            val result = exportPdfUseCase(uri)
+            updateState { copy(isExportingPdf = false) }
+            
+            if (result.isSuccess) {
+                emitEffect(SettingsContract.Effect.ShowToast("PDF Statement generated successfully"))
+                localNotificationManager.showPdfGeneratedNotification(uri)
+            } else {
+                emitEffect(SettingsContract.Effect.ShowToast("Failed to export PDF: ${result.exceptionOrNull()?.message}"))
+            }
+        }
+    }
+
+    private fun exportData(uri: android.net.Uri, password: CharArray) {
+        viewModelScope.launch {
+            updateState { copy(isExporting = true) }
+            val result = exportDataUseCase(uri, password)
+            updateState { copy(isExporting = false) }
+            
+            val message = if (result.isSuccess) "Data exported successfully" else "Export failed: ${result.exceptionOrNull()?.message}"
+            emitEffect(SettingsContract.Effect.ShowToast(message))
+        }
+    }
+
+    private fun importData(uri: android.net.Uri, password: CharArray, clearExisting: Boolean) {
+        viewModelScope.launch {
+            updateState { copy(isImporting = true) }
+            val result = importDataUseCase(uri, password, clearExisting)
+            updateState { copy(isImporting = false) }
+            
+            val message = if (result.isSuccess) "Data imported successfully" else "Import failed: ${result.exceptionOrNull()?.message}"
+            emitEffect(SettingsContract.Effect.ShowToast(message))
+        }
+    }
+
+    private fun updateCurrency(code: String, symbol: String) {
+        viewModelScope.launch {
+            userPreferences.setCurrency(code, symbol)
+        }
+    }
+
+    private fun activatePro(licenseKey: String, email: String?) {
+        viewModelScope.launch {
+            updateState { copy(isActivatingPro = true, proActivationError = null, proActivationSuccess = false) }
+            val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "DEVICE_${System.currentTimeMillis()}"
+            val result = licenseEngine.activateLicenseRemote(licenseKey, email, deviceId)
+            if (result.isValid) {
+                userPreferences.setProStatus(
+                    isPro = true,
+                    tier = result.tier.identifier,
+                    token = licenseKey.trim(),
+                    orderId = result.orderId,
+                    expiresAt = result.expiresAtEpochMs
+                )
+                updateState { copy(isActivatingPro = false, proActivationSuccess = true, proActivationError = null) }
+                emitEffect(SettingsContract.Effect.ShowToast("Cipher Pro successfully activated!"))
+            } else {
+                val errorMsg = result.errorMessage ?: "Invalid license key. Please check and try again."
+                updateState { copy(isActivatingPro = false, proActivationError = errorMsg, proActivationSuccess = false) }
+                emitEffect(SettingsContract.Effect.ShowToast(errorMsg))
+            }
+        }
+    }
+
+    private fun deactivatePro() {
+        viewModelScope.launch {
+            val token = userPreferences.getCachedLicenseToken()
+            val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+            if (!token.isNullOrBlank() && deviceId.isNotBlank()) {
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    licenseEngine.deactivateLicenseRemote(token, deviceId)
+                }
+            }
+            userPreferences.deactivatePro()
+            emitEffect(SettingsContract.Effect.ShowToast("Pro deactivated. Device slot freed."))
+        }
+    }
+
+    private fun checkForAppUpdates() {
+        viewModelScope.launch {
+            updateState { copy(isCheckingUpdate = true) }
+            val checkResult = com.masum.cipher.core.updates.GitHubUpdateManager.checkForUpdate()
+            updateState {
+                copy(
+                    isCheckingUpdate = false,
+                    updateCheckResult = checkResult
+                )
+            }
+            if (!checkResult.isUpdateAvailable) {
+                emitEffect(SettingsContract.Effect.ShowToast("Cipher is up to date (v${checkResult.currentVersion})"))
+            }
+        }
+    }
+
+    private fun downloadAndInstallUpdate(downloadUrl: String) {
+        viewModelScope.launch {
+            updateState { copy(downloadPercent = 0, downloadError = null) }
+            com.masum.cipher.core.updates.GitHubUpdateManager.downloadApk(
+                context = context,
+                downloadUrl = downloadUrl
+            ) { progress ->
+                when (progress) {
+                    is com.masum.cipher.core.updates.DownloadProgress.Progress -> {
+                        updateState { copy(downloadPercent = progress.percent) }
+                    }
+                    is com.masum.cipher.core.updates.DownloadProgress.Success -> {
+                        updateState { copy(downloadPercent = null, updateCheckResult = null) }
+                        com.masum.cipher.core.updates.GitHubUpdateManager.installApk(context, progress.apkFile)
+                    }
+                    is com.masum.cipher.core.updates.DownloadProgress.Error -> {
+                        updateState { copy(downloadPercent = null, downloadError = progress.message) }
+                        emitEffect(SettingsContract.Effect.ShowToast("Update download failed: ${progress.message}"))
+                    }
+                }
+            }
+        }
+    }
+}
