@@ -1,0 +1,54 @@
+name: Import Cipher and build Revolut fix
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Import upstream Cipher if missing
+        run: |
+          if [ ! -f settings.gradle.kts ]; then
+            git clone --depth=1 https://github.com/insaneodyssey26/Cipher.git /tmp/cipher-upstream
+            rsync -a --exclude=.git --exclude=README.md --exclude=app/src/main/java/com/masum/cipher/core/notifications/RevolutNotificationParser.kt --exclude=app/src/test/java/com/masum/cipher/core/notifications/RevolutNotificationParserTest.kt --exclude=.github/workflows/ci.yml /tmp/cipher-upstream/ ./
+            git add .
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Vendor upstream Cipher source for Revolut improvements'
+            git push
+          fi
+      - name: Apply Revolut patch
+        run: python3 tools/integrate_revolut.py
+      - name: Save listener patch to repository
+        run: |
+          if ! git diff --quiet -- app/src/main/java/com/masum/cipher/core/notifications/TransactionNotificationService.kt; then
+            git add app/src/main/java/com/masum/cipher/core/notifications/TransactionNotificationService.kt
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Integrate Revolut payment parsing into Cipher notifications'
+            git push
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test Revolut parser
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --tests 'com.masum.cipher.core.notifications.RevolutNotificationParserTest' --stacktrace
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: budget-revolut-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
