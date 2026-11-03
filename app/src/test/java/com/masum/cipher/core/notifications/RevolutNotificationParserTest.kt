@@ -32,6 +32,14 @@ class RevolutNotificationParserTest {
         assertEquals(8.20, result!!.amount, 0.0001)
     }
 
+    @Test fun parsesAdditionalNotificationField() {
+        val result = RevolutNotificationParser.parse(
+            "T554 Carcaixent", "", "", "Paid €3.14 at T554 Carcaixent"
+        )
+        assertEquals("T554 Carcaixent", result?.merchant)
+        assertEquals(3.14, result!!.amount, 0.0001)
+    }
+
     @Test fun balanceIsNotPayment() {
         assertNull(RevolutNotificationParser.parse("Balance", "EUR Balance: €21.86"))
     }
