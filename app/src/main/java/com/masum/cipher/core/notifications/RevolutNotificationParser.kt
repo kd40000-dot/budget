@@ -25,8 +25,8 @@ internal object RevolutNotificationParser {
     )
     private val invalidMerchant = Regex("""(?i)^(?:revolut|payment|card payment|miscellaneous)$""")
 
-    fun parse(title: String, text: String, bigText: String = ""): Payment? {
-        val candidates = listOf(bigText, text).filter { it.isNotBlank() }.distinct()
+    fun parse(title: String, text: String, bigText: String = "", vararg additionalFields: String): Payment? {
+        val candidates = (listOf(bigText, text) + additionalFields.toList()).filter { it.isNotBlank() }.distinct()
         for (body in candidates) {
             val match = cardPayment.find(body)
             if (match != null) {
