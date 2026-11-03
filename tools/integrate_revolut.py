@@ -13,7 +13,7 @@ new = """            val revolutPayment = if (packageName == "com.revolut.revolu
                 else if (packageName == "com.revolut.revolut") null
                 else transactionParser.parse(fullMessage, currencyCode)
             if (revolutPayment != null || parsedTx != null) {"""
-if "RevolutNotificationParser.parse(title, text, bigText)" in src:
+if "RevolutNotificationParser.parse(" in src:
     print("Already patched")
     raise SystemExit(0)
 if old not in src:
