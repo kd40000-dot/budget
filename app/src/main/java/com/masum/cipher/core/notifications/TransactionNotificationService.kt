@@ -1,5 +1,7 @@
 package com.masum.cipher.core.notifications
 
+import android.util.Log
+import com.masum.cipher.BuildConfig
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.masum.cipher.core.data.local.entity.TransactionEntity
@@ -34,6 +36,7 @@ class TransactionNotificationService : NotificationListenerService() {
     lateinit var securityManager: SecurityManager
 
     private val serviceJob = SupervisorJob()
+    private val logTag = "BudgetNotif"
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     @Volatile
@@ -59,7 +62,11 @@ class TransactionNotificationService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
         val packageName = sbn.packageName ?: return
-        if (!cachedTrackedApps.contains(packageName)) return
+        if (!cachedTrackedApps.contains(packageName)) {
+            if (BuildConfig.DEBUG && packageName == REVOLUT_PACKAGE) Log.d(logTag, "Revolut received but not tracked")
+            return
+        }
+        if (BuildConfig.DEBUG) Log.d(logTag, "Tracked notification received; app=" + packageName)
 
         val notification = sbn.notification ?: return
         val extras = notification.extras ?: return
@@ -78,17 +85,20 @@ class TransactionNotificationService : NotificationListenerService() {
             .distinct()
             .joinToString(" ")
             .trim()
-        if (fullMessage.isBlank()) return
+        if (fullMessage.isBlank()) {
+            if (BuildConfig.DEBUG) Log.d(logTag, "Notification has no readable text")
+            return
+        }
 
         val currencyCode = cachedCurrencyCode
         val postedAtMillis = sbn.postTime
         serviceScope.launch {
-            val revolutPayment = if (packageName == "com.revolut.revolut") {
-                RevolutNotificationParser.parse(title, text, bigText)
+            val revolutPayment = if (packageName == REVOLUT_PACKAGE) {
+                RevolutNotificationParser.parse(title, text, bigText, textLines, titleBig, subText, summaryText, infoText)
             } else null
-            val parsedTx = if (revolutPayment != null) null
-                else if (packageName == "com.revolut.revolut") null
-                else transactionParser.parse(fullMessage, currencyCode)
+            // Retain upstream fallback so unknown Revolut notification formats are not discarded.
+            val parsedTx = if (revolutPayment == null) transactionParser.parse(fullMessage, currencyCode) else null
+            if (BuildConfig.DEBUG) Log.d(logTag, "Parsing: dedicated=" + (revolutPayment != null) + ", generic=" + (parsedTx != null))
             if (revolutPayment != null || parsedTx != null) {
                 val appLabel = try {
                     val pm = packageManager
@@ -113,11 +123,21 @@ class TransactionNotificationService : NotificationListenerService() {
                     rawSms = storedMessage,
                     timestamp = resolveTransactionTimestamp(postedAtMillis, System.currentTimeMillis())
                 )
-                if (securityManager.isDatabaseKeyUnavailable()) return@launch
-                transactionRepository.insertTransaction(transactionEntity)
+                if (securityManager.isDatabaseKeyUnavailable()) {
+                    if (BuildConfig.DEBUG) Log.w(logTag, "Transaction not saved: database key unavailable")
+                    return@launch
+                }
+                try {
+                    val saved = transactionRepository.insertTransaction(transactionEntity)
+                    if (BuildConfig.DEBUG) Log.d(logTag, "Transaction insertion: " + (if (saved == null) "not inserted" else "inserted"))
+                } catch (e: Exception) {
+                    Log.e(logTag, "Transaction insertion failed", e)
+                }
             }
         }
     }
+
+    companion object { private const val REVOLUT_PACKAGE = "com.revolut.revolut" }
 
     override fun onDestroy() {
         super.onDestroy()
