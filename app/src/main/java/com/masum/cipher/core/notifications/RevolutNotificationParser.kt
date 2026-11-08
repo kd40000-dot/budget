@@ -20,6 +20,11 @@ internal object RevolutNotificationParser {
     private val merchantOnlyPayment = Regex(
         """(?i)\bpaid\s*(€|EUR|£|GBP|\$|USD)\s*([0-9][0-9.,\s]*)(?=\s*$)"""
     )
+    // Revolut also displays the merchant ONLY in the title, while its body reads:
+    // "🛒 You spent €1.56\nEUR balance: €79.75".
+    private val spentWithTitle = Regex(
+        """(?i)\b(?:you\s+)?(?:spent|paid)\s*(€|EUR|£|GBP|\$|USD)\s*([0-9][0-9.,]*)(?![0-9.,])"""
+    )
     private val trailingBalance = Regex(
         """(?i)\s*(?:⚠️|⚠)?\s*(?:EUR|GBP|USD)?\s*balance\s*:.*$"""
     )
@@ -41,13 +46,13 @@ internal object RevolutNotificationParser {
                 return Payment(merchant, amount, currency(match.groupValues[1]))
             }
 
-            // Some Revolut variants put the merchant solely in the title.
-            val strippedBody = body.lineSequence().firstOrNull().orEmpty().trim()
-            val amountOnly = merchantOnlyPayment.find(strippedBody)
-            if (amountOnly != null) {
+            // Only transaction statements count; never use a balance figure as an expense.
+            // Use the notification title as the merchant for "You spent €1.56".
+            val spentMatch = spentWithTitle.find(body)
+            if (spentMatch != null) {
                 val merchant = usableTitle(title) ?: continue
-                val amount = parseAmount(amountOnly.groupValues[2]) ?: continue
-                return Payment(merchant, amount, currency(amountOnly.groupValues[1]))
+                val amount = parseAmount(spentMatch.groupValues[2]) ?: continue
+                return Payment(merchant, amount, currency(spentMatch.groupValues[1]))
             }
         }
         return null
