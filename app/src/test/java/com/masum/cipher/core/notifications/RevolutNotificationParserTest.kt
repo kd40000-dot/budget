@@ -40,6 +40,30 @@ class RevolutNotificationParserTest {
         assertEquals(3.14, result!!.amount, 0.0001)
     }
 
+    @Test fun revolutYouSpentMerchantInTitle() {
+        val result = RevolutNotificationParser.parse(
+            "Kuups Carcaixent Jose Vi",
+            "🛒 You spent €1.56\nEUR balance: €79.75"
+        )
+        assertNotNull(result)
+        assertEquals("Kuups Carcaixent Jose Vi", result!!.merchant)
+        assertEquals(1.56, result.amount, 0.0001)
+        assertEquals("EUR", result.currency)
+        assertFalse(result.isIncome)
+    }
+
+    @Test fun spentCommaDecimalAndBalanceAreSeparated() {
+        val result = RevolutNotificationParser.parse(
+            "Local shop", "You spent €12,34\nEUR balance: €250,89"
+        )
+        assertEquals("Local shop", result?.merchant)
+        assertEquals(12.34, result!!.amount, 0.0001)
+    }
+
+    @Test fun balanceAloneIsNotAnExpense() {
+        assertNull(RevolutNotificationParser.parse("Kuups Carcaixent Jose Vi", "EUR balance: €79.75"))
+    }
+
     @Test fun balanceIsNotPayment() {
         assertNull(RevolutNotificationParser.parse("Balance", "EUR Balance: €21.86"))
     }
